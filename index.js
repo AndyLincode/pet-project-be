@@ -14,6 +14,10 @@ app.get("/", (req, res, next) => {
 const productRouter = require(__dirname + '/routes/product');
 app.use("/product", require(__dirname + "/routes/product"));
 
+//坤達新增診所路由
+const clinicRouter = require(__dirname + '/routes/clinic');
+app.use("/clinic", require(__dirname + "/routes/clinic"));
+
 
 
 
