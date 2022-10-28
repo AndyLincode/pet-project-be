@@ -19,6 +19,9 @@ const clinicRouter = require(__dirname + '/routes/clinic');
 app.use("/clinic", require(__dirname + "/routes/clinic"));
 
 
+//碩恩新增購物車路由
+const cartRouter =require(__dirname+'/routes/cart');
+app.use('/cart',require(__dirname+'/routes/cart'))
 
 
 
