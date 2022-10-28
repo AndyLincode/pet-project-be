@@ -20,6 +20,9 @@ app.use("/clinic", clinicRouter);
 // 柏延新增文章路由
 const forumRouter = require(__dirname + '/routes/forum');
 app.use("/forum", forumRouter);
+//品葳新增會員路由
+const memberRouter = require(__dirname + '/routes/member');
+app.use("/member", memberRouter);
 
 //碩恩新增購物車路由
 const cartRouter = require(__dirname + '/routes/cart');

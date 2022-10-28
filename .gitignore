@@ -8,3 +8,5 @@
 .vscode
 
 package-lock.json
+.gitignore
+/moudules/db_connect.js
