@@ -8,13 +8,14 @@ app.get("/", (req, res, next) => {
   res.json("<h2>首頁</h2>");
 });
 
-// 以下新增路由 (請做備註)
-
 //裕庭新增商品路由
 const productRouter = require(__dirname + '/routes/product');
 app.use("/product", require(__dirname + "/routes/product"));
 
-
+// 以下新增路由 (請做備註)
+// 柏延新增文章路由
+const forum = require(__dirname + '/routes/forum');
+app.use("/forum", require(__dirname + "/routes/forum"));
 
 
 
