@@ -12,7 +12,7 @@ app.get("/", (req, res, next) => {
 
 //裕庭新增商品路由
 const productRouter = require(__dirname + '/routes/product');
-app.use("/product", require(__dirname + "/routes/product"));
+app.use("/product", productRouter);
 
 
 
