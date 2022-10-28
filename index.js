@@ -9,19 +9,21 @@ app.get("/", (req, res, next) => {
 });
 
 // 以下新增路由 (請做備註)
-
 //裕庭新增商品路由
 const productRouter = require(__dirname + '/routes/product');
-app.use("/product", require(__dirname + "/routes/product"));
+app.use("/product", productRouter);
 
 //坤達新增診所路由
 const clinicRouter = require(__dirname + '/routes/clinic');
-app.use("/clinic", require(__dirname + "/routes/clinic"));
+app.use("/clinic", clinicRouter);
 
+// 柏延新增文章路由
+const forumRouter = require(__dirname + '/routes/forum');
+app.use("/forum", forumRouter);
 
 //碩恩新增購物車路由
-const cartRouter =require(__dirname+'/routes/cart');
-app.use('/cart',require(__dirname+'/routes/cart'))
+const cartRouter = require(__dirname + '/routes/cart');
+app.use('/cart', cartRouter);
 
 
 
