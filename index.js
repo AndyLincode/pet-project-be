@@ -14,8 +14,8 @@ app.use("/product", require(__dirname + "/routes/product"));
 
 // 以下新增路由 (請做備註)
 // 柏延新增文章路由
-const forum = require(__dirname + '/routes/forum');
-app.use("/forum", require(__dirname + "/routes/forum"));
+const forumRouter = require(__dirname + '/routes/forum');
+app.use("/forum",forumRouter);
 
 
 
