@@ -16,7 +16,7 @@ app.use("/product", require(__dirname + "/routes/product"));
 
 //碩恩新增購物車路由
 const cartRouter =require(__dirname+'/routes/cart');
-app.use('/cart',require(__dirname+'/routes/cart'))
+app.use('/cart',cartRouter)
 
 
 
