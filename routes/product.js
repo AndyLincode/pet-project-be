@@ -3,8 +3,6 @@ const router = express.Router();
 const db = require(__dirname + '/../modules/db_connect');
 const moment = require('moment-timezone'); // 日期格式(選擇性)
 
-
-
 // 資料表導入
 async function getListData(req) {
   const perPage = 5;
@@ -31,21 +29,32 @@ async function getListData(req) {
     if (page > totalPages) {
       return res.redirect(`?page=${totalPages}`);
     }
-    const sql = `SELECT * FROM products ${where} ORDER BY sid DESC LIMIT ${(page - 1) * perPage}, ${perPage}`;
+    const sql = `SELECT * FROM products ${where} ORDER BY sid DESC LIMIT ${
+      (page - 1) * perPage
+    }, ${perPage}`;
     [rows] = await db.query(sql);
   }
-  return { totalRows, totalPages, perPage, page, rows, search, query: req.query };
+  return {
+    totalRows,
+    totalPages,
+    perPage,
+    page,
+    rows,
+    search,
+    query: req.query,
+  };
 }
 
-
-// R 
-
+// R
+router.get('/', async (req, res) => {
+  // 商品主頁
+});
 
 // 資料庫資料以json呈現
 router.get('/json', async (req, res) => {
   const data = await getListData(req);
 
   res.json(data);
-})
+});
 
 module.exports = router;
