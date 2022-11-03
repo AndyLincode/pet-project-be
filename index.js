@@ -3,6 +3,10 @@ const express = require('express');
 const app = express();
 const db = require(__dirname + '/modules/db_connect');
 // app.set('view engine', 'ejs')
+const cors = require('cors');
+
+// top middleware
+app.use(cors());
 
 app.get('/', (req, res, next) => {
   res.json('<h2>首頁</h2>');
