@@ -16,12 +16,26 @@ async function getListData(req) {
     )} OR \`sid\` LIKE ${db.escape('%' + search + '%')})`;
     // db.escape() 跳脫
   }
-  let cate = req.query.cate ? req.query.cate.trim() : '';
+
+  // 分類篩選
+  let cate = req.params.cate ? req.params.cate.trim() : '';
+  // console.log(cate);
   if (cate) {
-    where = `WHERE category= ${cate}`;
+    if (+cate === 1 || +cate === 2) {
+      where = `JOIN \`product_categories\` pc ON p.category = pc.sid WHERE pc.parent_sid =${cate}`;
+    } else {
+      where = `WHERE \`category\`=${cate}`;
+    }
   }
 
-  const t_sql = `SELECT COUNT(1) totalRows FROM products ${where}`;
+  // 細節頁
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+  // console.log(sid);
+  if (sid) {
+      where = `JOIN \`product_categories\` pc ON p.category = pc.sid WHERE p.sid =${sid}`;
+  }
+
+  const t_sql = `SELECT COUNT(1) totalRows FROM products p ${where}`;
   const [[{ totalRows }]] = await db.query(t_sql);
 
   let totalPages = 0;
@@ -31,9 +45,10 @@ async function getListData(req) {
     if (page > totalPages) {
       return res.redirect(`?page=${totalPages}`);
     }
-    const sql = `SELECT * FROM products ${where} ORDER BY sid DESC LIMIT ${
+    const sql = `SELECT p.* FROM \`products\` p ${where} ORDER BY sid DESC LIMIT ${
       (page - 1) * perPage
     }, ${perPage}`;
+
     [rows] = await db.query(sql);
   }
   return {
@@ -53,58 +68,6 @@ async function getCateData(req) {
   let rows = [];
   [rows] = await db.query(c_sql);
   return { rows };
-}
-
-async function getCate(req) {
-  const perPage = 16;
-  let page = +req.query.page || 1;
-  const t_sql = `SELECT COUNT(1) totalRows FROM products WHERE \`category\`=${[
-    +req.params.cate,
-  ]}`;
-  const [[{ totalRows }]] = await db.query(t_sql);
-  const sql = `SELECT *  FROM products WHERE \`category\`=${[
-    +req.params.cate,
-  ]} ORDER BY sid DESC LIMIT ${(page - 1) * perPage}, ${perPage}`;
-  const [rows] = await db.query(sql);
-
-  if (totalRows > 0) {
-    totalPages = Math.ceil(totalRows / perPage);
-  }
-  // console.log(req.params.cate);
-
-  return {
-    totalRows,
-    totalPages,
-    perPage,
-    page,
-    rows,
-  };
-}
-
-async function getParentCate(req) {
-  const perPage = 16;
-  let page = +req.query.page || 1;
-  const t_sql = `SELECT COUNT(1) totalRows FROM products p JOIN product_categories pc ON p.category = pc.sid WHERE pc.parent_sid=${[
-    +req.params.p_sid,
-  ]}`;
-  const [[{ totalRows }]] = await db.query(t_sql);
-  const sql = `SELECT p.* FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid WHERE pc.parent_sid =${[
-    +req.params.p_sid,
-  ]} ORDER BY sid DESC LIMIT ${(page - 1) * perPage}, ${perPage}`;
-  const [rows] = await db.query(sql);
-
-  if (totalRows > 0) {
-    totalPages = Math.ceil(totalRows / perPage);
-  }
-  // console.log(req.params.cate);
-
-  return {
-    totalRows,
-    totalPages,
-    perPage,
-    page,
-    rows,
-  };
 }
 
 // R
@@ -128,14 +91,16 @@ router.get('/p-json', async (req, res) => {
   res.json(data);
 });
 
+// 分類篩選
 router.get('/p-json/cate/:cate', async (req, res) => {
-  const data = await getCate(req);
+  const data = await getListData(req);
 
   res.json(data);
 });
 
-router.get('/p-json/pcate/:p_sid', async (req, res) => {
-  const data = await getParentCate(req);
+// 細節篩選
+router.get('/p-json/detail/:sid', async (req, res) => {
+  const data = await getListData(req);
 
   res.json(data);
 });
