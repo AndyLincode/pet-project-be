@@ -22,7 +22,7 @@ async function getListData(req) {
   // console.log(cate);
   if (cate) {
     if (+cate === 1 || +cate === 2) {
-      where = `JOIN \`product_categories\` pc ON p.category = pc.sid WHERE pc.parent_sid =${cate}`;
+      where = `WHERE pc.parent_sid =${cate}`;
     } else {
       where = `WHERE \`category\`=${cate}`;
     }
@@ -32,10 +32,10 @@ async function getListData(req) {
   let sid = req.params.sid ? req.params.sid.trim() : '';
   // console.log(sid);
   if (sid) {
-      where = `JOIN \`product_categories\` pc ON p.category = pc.sid WHERE p.sid =${sid}`;
+    where = `WHERE p.sid =${sid}`;
   }
 
-  const t_sql = `SELECT COUNT(1) totalRows FROM products p ${where}`;
+  const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}`;
   const [[{ totalRows }]] = await db.query(t_sql);
 
   let totalPages = 0;
@@ -45,7 +45,7 @@ async function getListData(req) {
     if (page > totalPages) {
       return res.redirect(`?page=${totalPages}`);
     }
-    const sql = `SELECT p.* FROM \`products\` p ${where} ORDER BY sid DESC LIMIT ${
+    const sql = `SELECT p.*, pc.name cname FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where} ORDER BY p.sid DESC LIMIT ${
       (page - 1) * perPage
     }, ${perPage}`;
 
@@ -58,6 +58,33 @@ async function getListData(req) {
     page,
     rows,
     search,
+    query: req.query,
+  };
+}
+
+async function getProductData(req) {
+  let where = `WHERE 1`;
+
+  // 細節頁
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+  if (sid) {
+    where = `WHERE p.sid =${sid}`;
+  }
+
+  const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p ${where}`;
+  const [[{ totalRows }]] = await db.query(t_sql);
+
+  let totalPages = 0;
+  let rows = [];
+  if (totalRows > 0) {
+    const sql = `SELECT p.*, pc.name cname FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}  `;
+
+    [rows] = await db.query(sql);
+  }
+  return {
+    totalRows,
+    totalPages,
+    rows,
     query: req.query,
   };
 }
@@ -98,9 +125,9 @@ router.get('/p-json/cate/:cate', async (req, res) => {
   res.json(data);
 });
 
-// 細節篩選
+// 細節頁
 router.get('/p-json/detail/:sid', async (req, res) => {
-  const data = await getListData(req);
+  const data = await getProductData(req);
 
   res.json(data);
 });
