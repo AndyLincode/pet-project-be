@@ -7,6 +7,7 @@ const cors = require('cors');
 
 // top middleware
 app.use(cors());
+app.use(express.json());
 
 app.get('/', (req, res, next) => {
   res.json('<h2>首頁</h2>');
@@ -21,7 +22,7 @@ app.use('/product', productRouter);
 // --------404-------------
 
 app.use((req, res) => {
-  res.status(404).render('404');
+  res.status(404).send('Error! NOT FOUND');
 });
 
 const port = process.env.SERVER_PORT || 6002;

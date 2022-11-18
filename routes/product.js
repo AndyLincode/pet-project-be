@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require(__dirname + '/../modules/db_connect');
 const moment = require('moment-timezone'); // 日期格式(選擇性)
+const SqlString = require('sqlstring');
 
 // 資料表導入(products)
 async function getListData(req) {
@@ -130,6 +131,66 @@ router.get('/p-json/detail/:sid', async (req, res) => {
   const data = await getProductData(req);
 
   res.json(data);
+});
+
+// 新增評價
+router.get('/addReply-api', async (req, res) => {
+  const reply = {
+    scores: 5,
+    comment: '測試新增回應',
+    p_sid: 1,
+    m_sid: 1,
+    o_sid: 1,
+    created_at: new Date(),
+  };
+
+  if (
+    !reply.scores ||
+    !reply.comment ||
+    !reply.p_sid ||
+    !reply.m_sid ||
+    !reply.o_sid
+  ) {
+    return res.json({ message: 'fail', code: '401' });
+  }
+
+  // 產生 sql 語法
+  const set = [];
+  let setSql = '';
+  let insertSql = '';
+
+  // obj.entrues -> score : 5 , comment: '測試新增回應' , ....
+  for (const [key, value] of Object.entries(reply)) {
+    if (value) {
+      // SqlString 處理 sql 語法套件
+      set.push(`${key} = ${SqlString.escape(value)}`);
+    }
+  }
+
+  // 檢查
+  if (!set.length) {
+    return res.json({ message: 'fail', code: '400' });
+  }
+
+  setSql = ` SET ` + set.join(`, `);
+
+  insertSql = `INSERT INTO product_comment_try ${setSql}`;
+
+  console.log(insertSql);
+
+  try {
+    // insert to db
+    const [result] = await db.query(insertSql, [{ ...reply }]);
+
+    res.json(result);
+    if (result.insertSql) {
+      return res.json({ message: 'success', code: '200' });
+    } else {
+      return res.json({ message: 'fail', code: '400' });
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
 });
 
 module.exports = router;
