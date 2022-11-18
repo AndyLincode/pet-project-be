@@ -94,6 +94,14 @@ async function getCateData(req) {
   return { rows };
 }
 
+// 資料表導入(攝影師)
+async function getPhotographers(req) {
+  const p_sql = `SELECT * FROM photographer`;
+  let rows = [];
+  [rows] = await db.query(p_sql);
+  return { rows };
+}
+
 // R
 // router.get('/', async (req, res) => {
 //   // 商品主頁
@@ -128,6 +136,12 @@ router.get('/p-json/detail/:sid', async (req, res) => {
 
   res.json(data);
 });
+// 攝影師資訊
+router.get('/photographers-json', async (req, res) => {
+  const data = await getPhotographers(req);
+
+  res.json(data);
+});
 
 // 新增評價
 router.post('/addReply-api', async (req, res) => {
@@ -153,7 +167,7 @@ router.post('/addReply-api', async (req, res) => {
     !reply.m_sid ||
     !reply.o_sid
   ) {
-    return res.json({ message: 'fail', code: '401' });
+    return res.json({ message: '請輸入回應', code: '401' });
   }
 
   // 產生 sql 語法
