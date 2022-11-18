@@ -29,12 +29,8 @@ async function getListData(req) {
     }
   }
 
-  // 細節頁
-  let sid = req.params.sid ? req.params.sid.trim() : '';
-  // console.log(sid);
-  if (sid) {
-    where = `WHERE p.sid =${sid}`;
-  }
+  // 排序
+  let sort = req.params.sort ? req.params.sort.trim() : '';
 
   const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}`;
   const [[{ totalRows }]] = await db.query(t_sql);
@@ -134,15 +130,21 @@ router.get('/p-json/detail/:sid', async (req, res) => {
 });
 
 // 新增評價
-router.get('/addReply-api', async (req, res) => {
-  const reply = {
-    scores: 5,
-    comment: '測試新增回應',
-    p_sid: 1,
-    m_sid: 1,
-    o_sid: 1,
-    created_at: new Date(),
-  };
+router.post('/addReply-api', async (req, res) => {
+  // const reply = {
+  //   scores: 5,
+  //   comment: '測試新增回應',
+  //   p_sid: 1,
+  //   m_sid: 1,
+  //   o_sid: 1,
+  //   created_at: new Date(),
+  // };
+  const getReply = req.body;
+  // const now = new Date;
+  const m = moment();
+  const reply = { ...getReply, created_at: m.format('YYYY-MM-DD HH:mm:ss') };
+
+  console.log(reply);
 
   if (
     !reply.scores ||
@@ -159,7 +161,7 @@ router.get('/addReply-api', async (req, res) => {
   let setSql = '';
   let insertSql = '';
 
-  // obj.entrues -> score : 5 , comment: '測試新增回應' , ....
+  // obj.entries -> score : 5 , comment: '測試新增回應' , ....
   for (const [key, value] of Object.entries(reply)) {
     if (value) {
       // SqlString 處理 sql 語法套件
@@ -191,6 +193,7 @@ router.get('/addReply-api', async (req, res) => {
   } catch (error) {
     console.log(error.message);
   }
+  // res.json(reply);
 });
 
 module.exports = router;
