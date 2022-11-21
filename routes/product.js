@@ -29,9 +29,6 @@ async function getListData(req) {
     }
   }
 
-  // 排序
-  let sort = req.params.sort ? req.params.sort.trim() : '';
-
   const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}`;
   const [[{ totalRows }]] = await db.query(t_sql);
 
@@ -86,6 +83,70 @@ async function getProductData(req) {
   };
 }
 
+// 資料排序
+async function getListDataSort(req) {
+  const perPage = 16;
+  let page = +req.query.page || 1;
+  // trim() 去除空白
+  let search = req.query.search ? req.query.search.trim() : '';
+  let where = `WHERE 1`;
+  let sort = `p.created_at DESC`;
+  if (search) {
+    where += ` AND(\`name\` LIKE ${db.escape(
+      '%' + search + '%'
+    )} OR \`sid\` LIKE ${db.escape('%' + search + '%')})`;
+    // db.escape() 跳脫
+  }
+
+  // 分類篩選
+  let sortMethod = req.params.sortMethod ? req.params.sortMethod.trim() : '';
+  console.log(sortMethod);
+  if (sortMethod) {
+    if (sortMethod === 'highToLow') {
+      sort = ` p.member_price DESC`;
+    } else if (sortMethod === 'lowToHigh') {
+      sort = ` p.member_price`;
+    }
+  }
+
+  // 分類篩選
+  let cate = req.params.cate ? req.params.cate.trim() : '';
+  // console.log(cate);
+  if (cate) {
+    if (+cate === 1 || +cate === 2) {
+      where = `WHERE pc.parent_sid =${cate}`;
+    } else {
+      where = `WHERE \`category\`=${cate}`;
+    }
+  }
+
+  const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}`;
+  const [[{ totalRows }]] = await db.query(t_sql);
+
+  let totalPages = 0;
+  let rows = [];
+  if (totalRows > 0) {
+    totalPages = Math.ceil(totalRows / perPage);
+    if (page > totalPages) {
+      return res.redirect(`?page=${totalPages}`);
+    }
+    const sql = `SELECT p.*, pc.name cname FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where} ORDER BY ${sort}  LIMIT ${
+      (page - 1) * perPage
+    }, ${perPage}`;
+
+    [rows] = await db.query(sql);
+  }
+  return {
+    totalRows,
+    totalPages,
+    perPage,
+    page,
+    rows,
+    search,
+    query: req.query,
+  };
+}
+
 // 資料表導入(商品分類)
 async function getCateData(req) {
   const c_sql = `SELECT * FROM product_categories`;
@@ -126,6 +187,13 @@ router.get('/p-json', async (req, res) => {
 // 分類篩選
 router.get('/p-json/cate/:cate', async (req, res) => {
   const data = await getListData(req);
+
+  res.json(data);
+});
+
+// 價格篩選, 特價類型篩選
+router.get('/p-json/:sortMethod', async (req, res) => {
+  const data = await getListDataSort(req);
 
   res.json(data);
 });
