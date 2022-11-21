@@ -16,7 +16,7 @@ async function getListData(req) {
 
   // 分類篩選
   let sortMethod = req.params.sortMethod ? req.params.sortMethod.trim() : '';
-  console.log(sortMethod);
+  console.log('sortMethod:', sortMethod);
   if (sortMethod) {
     if (sortMethod === 'highToLow') {
       sort = ` p.member_price DESC`;
@@ -27,15 +27,15 @@ async function getListData(req) {
 
   // TODO: 特價類型篩選
   // 特價類型篩選
-  let saleType = req.params.saleType ? req.params.saleType.trim() : '';
-  // console.log(saleType);
-  // if (saleType) {
-  //   if (saleType === 'highToLow') {
-  //     where += ` p.member_price DESC`;
-  //   } else if (sortMethod === 'lowToHigh') {
-  //     where += ` p.member_price`;
-  //   }
-  // }
+  let salesType = req.query.salesType ? req.query.salesType.trim() : '';
+  console.log('salesType:', salesType);
+  if (salesType) {
+    if (salesType === 'sp') {
+      where = `WHERE p.specials = '特價促銷'`;
+    } else if (salesType === 'multi') {
+      where = `WHERE p.specials = '多件優惠'`;
+    }
+  }
 
   if (search) {
     where += ` AND(p.name LIKE ${db.escape(
@@ -46,7 +46,7 @@ async function getListData(req) {
   // res.type('text/plain; charset=utf-8');
   // 分類篩選
   let cate = req.params.cate ? req.params.cate.trim() : '';
-  console.log(cate);
+  console.log('category:', cate);
   if (cate) {
     if (+cate === 1 || +cate === 2) {
       where += ` AND pc.parent_sid =${cate}`;
@@ -163,7 +163,7 @@ router.get('/c-json', async (req, res) => {
 
 // 資料庫資料以json呈現
 router.get(
-  '/p-json/:cate?/:sortMethod?/:priceSort?/:saleType?',
+  '/p-json/:cate?/:sortMethod?/:priceSort?/:salesType?',
   async (req, res) => {
     const data = await getListData(req);
 
