@@ -25,32 +25,35 @@ async function getListData(req) {
     }
   }
 
+  // TODO: 特價類型篩選
   // 特價類型篩選
   let saleType = req.params.saleType ? req.params.saleType.trim() : '';
-  console.log(saleType);
-  if (saleType) {
-    if (saleType === 'highToLow') {
-      where += ` p.member_price DESC`;
-    } else if (sortMethod === 'lowToHigh') {
-      where += ` p.member_price`;
-    }
-  }
+  // console.log(saleType);
+  // if (saleType) {
+  //   if (saleType === 'highToLow') {
+  //     where += ` p.member_price DESC`;
+  //   } else if (sortMethod === 'lowToHigh') {
+  //     where += ` p.member_price`;
+  //   }
+  // }
 
   if (search) {
-    where += ` AND(\`name\` LIKE ${db.escape(
+    where += ` AND(p.name LIKE ${db.escape(
       '%' + search + '%'
-    )} OR \`sid\` LIKE ${db.escape('%' + search + '%')})`;
+    )} OR p.member_price LIKE ${db.escape('%' + search + '%')})`;
     // db.escape() 跳脫
   }
-
+  // res.type('text/plain; charset=utf-8');
   // 分類篩選
   let cate = req.params.cate ? req.params.cate.trim() : '';
-  // console.log(cate);
+  console.log(cate);
   if (cate) {
     if (+cate === 1 || +cate === 2) {
-      where = `WHERE pc.parent_sid =${cate}`;
+      where += ` AND pc.parent_sid =${cate}`;
+    } else if (cate == 0) {
+      where += '';
     } else {
-      where = `WHERE \`category\`=${cate}`;
+      where += ` AND p.category=${cate}`;
     }
   }
 
@@ -64,7 +67,7 @@ async function getListData(req) {
     where += ``;
   }
 
-  const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}`;
+  const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid  ${where}  `;
   const [[{ totalRows }]] = await db.query(t_sql);
 
   let totalPages = 0;
@@ -224,21 +227,24 @@ router.get('/c-json', async (req, res) => {
 });
 
 // 資料庫資料以json呈現
-router.get('/p-json/:sortMethod?/:priceSort?/:saleType?', async (req, res) => {
-  const data = await getListData(req);
-
-  res.json(data);
-});
-
-// 分類篩選
 router.get(
-  '/p-json/cate/:cate/:sortMethod?/:priceSort?/:saleType?',
+  '/p-json/:cate?/:sortMethod?/:priceSort?/:saleType?',
   async (req, res) => {
     const data = await getListData(req);
 
     res.json(data);
   }
 );
+
+// 分類篩選
+// router.get(
+//   '/p-json/cate/:cate/:sortMethod?/:priceSort?/:saleType?',
+//   async (req, res) => {
+//     const data = await getListData(req);
+
+//     res.json(data);
+//   }
+// );
 
 // 價格篩選, 特價類型篩選
 // router.get('/p-json/:sortMethod', async (req, res) => {
@@ -248,7 +254,7 @@ router.get(
 // });
 
 // 細節頁
-router.get('/p-json/detail/:sid', async (req, res) => {
+router.get('/detail/:sid', async (req, res) => {
   const data = await getProductData(req);
 
   res.json(data);
