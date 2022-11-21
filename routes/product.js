@@ -94,6 +94,7 @@ async function getListData(req) {
   };
 }
 
+// 商品細節頁
 async function getProductData(req) {
   let where = `WHERE 1`;
 
@@ -103,98 +104,24 @@ async function getProductData(req) {
     where = `WHERE p.sid =${sid}`;
   }
 
-  const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p ${where}`;
-  const [[{ totalRows }]] = await db.query(t_sql);
+  const t_sql = `SELECT COUNT(1) totalRows, AVG(pr.scores) avgScores FROM \`products\` p JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}`;
+  const [[{ totalRows, avgScores }]] = await db.query(t_sql);
 
   let totalPages = 0;
   let rows = [];
   if (totalRows > 0) {
-    const sql = `SELECT p.*, pc.name cname FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}  `;
+    const sql = `SELECT p.*, pc.name cname, pr.*  FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}  `;
 
     [rows] = await db.query(sql);
   }
   return {
     totalRows,
+    avgScores,
     totalPages,
     rows,
     query: req.query,
   };
 }
-
-// 資料排序
-// async function getListDataSort(req) {
-//   const perPage = 16;
-//   let page = +req.query.page || 1;
-//   // trim() 去除空白
-//   let search = req.query.search ? req.query.search.trim() : '';
-//   let where = `WHERE 1`;
-//   let sort = `p.created_at DESC`;
-
-//   if (search) {
-//     where += ` AND(\`name\` LIKE ${db.escape(
-//       '%' + search + '%'
-//     )} OR \`sid\` LIKE ${db.escape('%' + search + '%')})`;
-//     // db.escape() 跳脫
-//   }
-
-//   // 分類篩選
-//   let sortMethod = req.params.sortMethod ? req.params.sortMethod.trim() : '';
-//   console.log(sortMethod);
-//   if (sortMethod) {
-//     if (sortMethod === 'highToLow') {
-//       sort = ` p.member_price DESC`;
-//     } else if (sortMethod === 'lowToHigh') {
-//       sort = ` p.member_price`;
-//     }
-//   }
-
-//   // 價格區間篩選
-//   let min_price = +req.query.min_price || 0;
-//   let max_price = +req.query.max_price || 99999;
-//   console.log({ min_price, max_price });
-//   if (min_price >= 0 && max_price >= 0) {
-//     where += ` AND p.member_price BETWEEN ${+min_price} AND ${+max_price}`;
-//   } else {
-//     where += ``;
-//   }
-
-//   // 分類篩選
-//   let cate = req.params.cate ? req.params.cate.trim() : '';
-//   // console.log(cate);
-//   if (cate) {
-//     if (+cate === 1 || +cate === 2) {
-//       where = `WHERE pc.parent_sid =${cate}`;
-//     } else {
-//       where = `WHERE \`category\`=${cate}`;
-//     }
-//   }
-
-//   const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}`;
-//   const [[{ totalRows }]] = await db.query(t_sql);
-
-//   let totalPages = 0;
-//   let rows = [];
-//   if (totalRows > 0) {
-//     totalPages = Math.ceil(totalRows / perPage);
-//     if (page > totalPages) {
-//       return res.redirect(`?page=${totalPages}`);
-//     }
-//     const sql = `SELECT p.*, pc.name cname FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where} ORDER BY ${sort}  LIMIT ${
-//       (page - 1) * perPage
-//     }, ${perPage}`;
-
-//     [rows] = await db.query(sql);
-//   }
-//   return {
-//     totalRows,
-//     totalPages,
-//     perPage,
-//     page,
-//     rows,
-//     search,
-//     query: req.query,
-//   };
-// }
 
 // 資料表導入(商品分類)
 async function getCateData(req) {
@@ -206,7 +133,15 @@ async function getCateData(req) {
 
 // 資料表導入(攝影師)
 async function getPhotographers(req) {
-  const p_sql = `SELECT * FROM photographer`;
+  let where = ' WHERE 1';
+
+  // 攝影師表單
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+  if (sid) {
+    where = `WHERE sid =${sid}`;
+  }
+
+  const p_sql = `SELECT * FROM photographer ${where}`;
   let rows = [];
   [rows] = await db.query(p_sql);
   return { rows };
@@ -236,23 +171,6 @@ router.get(
   }
 );
 
-// 分類篩選
-// router.get(
-//   '/p-json/cate/:cate/:sortMethod?/:priceSort?/:saleType?',
-//   async (req, res) => {
-//     const data = await getListData(req);
-
-//     res.json(data);
-//   }
-// );
-
-// 價格篩選, 特價類型篩選
-// router.get('/p-json/:sortMethod', async (req, res) => {
-//   const data = await getListDataSort(req);
-
-//   res.json(data);
-// });
-
 // 細節頁
 router.get('/detail/:sid', async (req, res) => {
   const data = await getProductData(req);
@@ -261,6 +179,13 @@ router.get('/detail/:sid', async (req, res) => {
 });
 // 攝影師資訊
 router.get('/photographers-json', async (req, res) => {
+  const data = await getPhotographers(req);
+
+  res.json(data);
+});
+
+// 攝影師表單
+router.get('/photographersForm/:sid', async (req, res) => {
   const data = await getPhotographers(req);
 
   res.json(data);
