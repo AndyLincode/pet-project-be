@@ -3,6 +3,57 @@ const router = express.Router();
 const db = require(__dirname + '/../modules/db_connect');
 const moment = require('moment-timezone'); // 日期格式(選擇性)
 const SqlString = require('sqlstring');
+const jwt = require('jsonwebtoken');
+
+// try JWT
+// app.get("/fake-login", (req, res) => {
+//   req.session.admin = {
+//     id: 888,
+//     account: "Andy",
+//     nickname: "小林",
+//   };
+
+//   res.redirect("/");
+// });
+// app.get("/logout", (req, res) => {
+//   delete req.session.admin;
+
+//   res.redirect("/");
+// });
+
+router.post('/login-api', async (req, res) => {
+  const output = {
+    success: false,
+    error: '帳號或密碼錯誤',
+    postData: req.body, //除錯用
+    auth: {},
+  };
+  const sql = 'SELECT * FROM admins WHERE account=?';
+  const [rows] = await db.query(sql, [req.body.account]);
+
+  if (!rows.length) {
+    return res.json(output);
+  }
+
+  const row = rows[0];
+  console.log(row);
+  console.log(req.body.password);
+
+  output.success = req.body.password == row['password_hash'] ? true : false;
+  if (output.success) {
+    output.error = '';
+    const { sid, account } = row;
+    const token = jwt.sign({ sid, account }, process.env.JWT_SECRET);
+    output.auth = {
+      sid,
+      account,
+      token,
+    };
+  }
+
+  res.json(output);
+});
+
 
 // 資料表導入(products)
 async function getListData(req) {
