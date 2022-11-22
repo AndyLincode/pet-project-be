@@ -258,4 +258,51 @@ router.post('/addReply-api', async (req, res) => {
   // res.json(reply);
 });
 
+// 新增收藏
+router.post('/addLoved-api', async (req, res) => {
+  const loved = {
+    p_sid: 2,
+    m_sid: 1,
+  };
+
+  const insertSql =
+    'INSERT INTO `product_loved`(`p_sid`, `m_sid`) VALUES (?,?)';
+
+  try {
+    const [result] = await db.query(insertSql, [loved.p_sid, loved.m_sid]);
+
+    res.json(result);
+    if (result.insertSql) {
+      return res.json({ message: 'success', code: '200' });
+    } else {
+      return res.json({ message: 'fail', code: '400' });
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
+});
+
+// 移除收藏
+router.delete('/addLoved-api', async (req, res) => {
+  const loved = {
+    p_sid: 2,
+    m_sid: 1,
+  };
+
+  const delSql = 'DELETE FROM `product_loved` WHERE p_sid=? AND m_sid=?';
+
+  try {
+    const [result] = await db.query(delSql, [loved.p_sid, loved.m_sid]);
+
+    res.json(result);
+    if (result.insertSql) {
+      return res.json({ message: 'success', code: '200' });
+    } else {
+      return res.json({ message: 'fail', code: '400' });
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
+});
+
 module.exports = router;
