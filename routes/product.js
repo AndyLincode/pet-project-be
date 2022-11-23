@@ -54,7 +54,6 @@ router.post('/login-api', async (req, res) => {
   res.json(output);
 });
 
-
 // 資料表導入(products)
 async function getListData(req) {
   const perPage = 16;
@@ -76,7 +75,7 @@ async function getListData(req) {
     }
   }
 
-  // TODO: 特價類型篩選
+  // DONE: 特價類型篩選
   // 特價類型篩選
   let salesType = req.query.salesType ? req.query.salesType.trim() : '';
   console.log('salesType:', salesType);
@@ -88,6 +87,7 @@ async function getListData(req) {
     }
   }
 
+  // 搜尋篩選
   if (search) {
     where += ` AND(p.name LIKE ${db.escape(
       '%' + search + '%'
@@ -95,6 +95,7 @@ async function getListData(req) {
     // db.escape() 跳脫
   }
   // res.type('text/plain; charset=utf-8');
+
   // 分類篩選
   let cate = req.params.cate ? req.params.cate.trim() : '';
   console.log('category:', cate);
@@ -174,6 +175,22 @@ async function getProductData(req) {
   };
 }
 
+// 資料表導入(商品收藏)
+async function getLovedList(req) {
+  const m_sid = +req.query.m_sid;
+
+  // 判斷登入
+  if (!m_sid) {
+    return res.json({ message: '請先登入', code: '401' });
+  }
+
+  const sql = `SELECT * FROM product_loved WHERE m_sid=?`;
+  const formatSql = SqlString.format(sql, [m_sid]);
+  let rows = [];
+  [rows] = await db.query(formatSql);
+  return { rows };
+}
+
 // 資料表導入(商品分類)
 async function getCateData(req) {
   const c_sql = `SELECT * FROM product_categories`;
@@ -238,6 +255,13 @@ router.get('/photographers-json', async (req, res) => {
 // 攝影師表單
 router.get('/photographersForm/:sid', async (req, res) => {
   const data = await getPhotographers(req);
+
+  res.json(data);
+});
+
+// 取得收藏列表
+router.get('/lovedList', async (req, res) => {
+  const data = await getLovedList(req);
 
   res.json(data);
 });
@@ -310,23 +334,28 @@ router.post('/addReply-api', async (req, res) => {
 });
 
 // 新增收藏
-router.post('/addLoved-api', async (req, res) => {
-  const loved = {
-    p_sid: 2,
-    m_sid: 1,
-  };
+router.get('/addLoved-api', async (req, res) => {
+  // const loved = {
+  //   p_sid: 2,
+  //   m_sid: 1,
+  // };
+  const p_sid = req.query.p_sid;
+  const m_sid = req.query.m_sid;
+
+  // 判斷登入
+  if (!m_sid) res.json({ message: '請先登入', code: '401' });
 
   const insertSql =
     'INSERT INTO `product_loved`(`p_sid`, `m_sid`) VALUES (?,?)';
 
   try {
-    const [result] = await db.query(insertSql, [loved.p_sid, loved.m_sid]);
+    const [result] = await db.query(insertSql, [p_sid, m_sid]);
 
     res.json(result);
     if (result.insertSql) {
       return res.json({ message: 'success', code: '200' });
     } else {
-      return res.json({ message: 'fail', code: '400' });
+      return res.json({ message: 'fail', code: '403' });
     }
   } catch (error) {
     console.log(error.message);
@@ -334,16 +363,18 @@ router.post('/addLoved-api', async (req, res) => {
 });
 
 // 移除收藏
-router.delete('/addLoved-api', async (req, res) => {
-  const loved = {
-    p_sid: 2,
-    m_sid: 1,
-  };
+router.get('/delLoved-api', async (req, res) => {
+  // const loved = {
+  //   p_sid: 2,
+  //   m_sid: 1,
+  // };
+  const p_sid = req.query.p_sid;
+  const m_sid = req.query.m_sid;
 
   const delSql = 'DELETE FROM `product_loved` WHERE p_sid=? AND m_sid=?';
 
   try {
-    const [result] = await db.query(delSql, [loved.p_sid, loved.m_sid]);
+    const [result] = await db.query(delSql, [p_sid, m_sid]);
 
     res.json(result);
     if (result.insertSql) {
