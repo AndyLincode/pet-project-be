@@ -4,12 +4,20 @@ const app = express();
 const db = require(__dirname + '/modules/db_connect');
 // app.set('view engine', 'ejs')
 const cors = require('cors');
+const multer = require('multer');
 
 // top middleware
 app.use(cors());
 
 app.get('/', (req, res, next) => {
   res.json('<h2>首頁</h2>');
+});
+
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+
+app.post(multer().none(), async (req, res) => {
+  next();
 });
 
 // 以下新增路由 (請做備註)
