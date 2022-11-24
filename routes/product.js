@@ -164,13 +164,24 @@ async function getProductData(req) {
   if (totalRows > 0) {
     const sql = `SELECT p.*, pc.name cname, pr.*  FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}  `;
 
+    // const r_sql = `SELECT * FROM products WHERE category= ORDER by RAND()  limit 4`
+
     [rows] = await db.query(sql);
   }
+
+  // 相關商品 (亂數抓取)
+  if (rows) {
+    const r_sql = `SELECT * FROM products WHERE category=${rows[0].category} AND sid!=${rows[0].sid} ORDER by RAND()  limit 5`;
+
+    [related_p] = await db.query(r_sql);
+  }
+
   return {
     totalRows,
     avgScores,
     totalPages,
     rows,
+    related_p,
     query: req.query,
   };
 }
