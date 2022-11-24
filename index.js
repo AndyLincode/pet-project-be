@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const db = require(__dirname + '/modules/db_connect');
+//讀寫檔案
+const fs = require('fs').promises
 // app.set('view engine', 'ejs')
 const cors = require('cors');
 const multer = require('multer');
