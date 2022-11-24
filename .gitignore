@@ -8,3 +8,6 @@
 .vscode
 
 package-lock.json
+
+.gitignore
+yarn.lock
