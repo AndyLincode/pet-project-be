@@ -44,6 +44,6 @@ app.use((req, res) => {
   res.status(404).send('Error! NOT FOUND');
 });
 
-const port = process.env.SERVER_PORT || 6002;
+const port = process.env.SERVER_PORT || 6002
 
-app.listen(port, () => console.log(`server started, port:${port}`));
+app.listen(port, () => console.log(`server started, port:${port}`))
