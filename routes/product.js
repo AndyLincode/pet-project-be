@@ -186,8 +186,8 @@ async function getProductData(req) {
     avgScores,
     totalPages,
     rows,
-    related_p,
-    comment,
+    // related_p,
+    // comment,
     query: req.query,
   };
 }
