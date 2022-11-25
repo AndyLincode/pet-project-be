@@ -5,5 +5,6 @@ const db = require(__dirname + '/../modules/db_connect');
 // router.get('/test', (req, res) => {
 //   const test_sql = '';
 // });
+// push test
 
 module.exports = router;
