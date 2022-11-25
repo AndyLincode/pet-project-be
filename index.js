@@ -3,7 +3,7 @@ const express = require('express');
 const app = express();
 const db = require(__dirname + '/modules/db_connect');
 //讀寫檔案
-const fs = require('fs').promises
+const fs = require('fs').promises;
 // app.set('view engine', 'ejs')
 const cors = require('cors');
 const multer = require('multer');
@@ -46,6 +46,6 @@ app.use((req, res) => {
   res.status(404).send('Error! NOT FOUND');
 });
 
-const port = process.env.SERVER_PORT || 6002
+const port = process.env.SERVER_PORT || 6002;
 
-app.listen(port, () => console.log(`server started, port:${port}`))
+app.listen(port, () => console.log(`server started, port:${port}`));
