@@ -156,17 +156,15 @@ async function getProductData(req) {
     where = `WHERE p.sid =${sid}`;
   }
 
-  const t_sql = `SELECT COUNT(1) totalRows, AVG(pr.scores) avgScores FROM \`products\` p JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}`;
-  const [[{ totalRows, avgScores }]] = await db.query(t_sql);
+  const t_sql = `SELECT  AVG(pr.scores) avgScores FROM \`products\` p JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}`;
+  const [[{ avgScores }]] = await db.query(t_sql);
 
   let totalPages = 0;
   let rows = [];
-  if (totalRows > 0) {
-    // FIXME sql 商品超過125 抓不到??
-    const sql = `SELECT p.*, pc.name cname  FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}  `;
 
-    [rows] = await db.query(sql);
-  }
+  const sql = `SELECT p.*, pc.name cname  FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}  `;
+
+  [rows] = await db.query(sql);
 
   // 相關商品 (亂數抓取)
   if (rows[0]) {
@@ -182,12 +180,11 @@ async function getProductData(req) {
   }
 
   return {
-    totalRows,
     avgScores,
     totalPages,
     rows,
-    // related_p,
-    // comment,
+    related_p,
+    comment,
     query: req.query,
   };
 }
