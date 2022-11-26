@@ -243,11 +243,6 @@ async function getPhotographers(req) {
 }
 
 // R
-// router.get('/', async (req, res) => {
-//   // 商品主頁
-
-// });
-
 // 取得分類傳至react呈現
 router.get('/c-json', async (req, res) => {
   // 商品分類
