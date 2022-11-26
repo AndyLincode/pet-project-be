@@ -146,7 +146,7 @@ async function getListData(req) {
   };
 }
 
-// 商品細節頁 + 相關商品
+// 商品細節頁 + 相關商品 + 評論
 async function getProductData(req) {
   let where = `WHERE 1`;
 
@@ -173,8 +173,9 @@ async function getProductData(req) {
     [related_p] = await db.query(r_sql);
   }
 
+  // 評論
   if (rows[0]) {
-    const c_sql = `SELECT * FROM \`product_comment_try\` pr WHERE pr.p_sid=${sid}`;
+    const c_sql = `SELECT pr.*, m.member_photo FROM \`product_comment_try\` pr JOIN members_data m ON m.sid=pr.m_sid WHERE pr.p_sid=${sid}`;
 
     [comment] = await db.query(c_sql);
   }
