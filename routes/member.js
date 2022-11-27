@@ -23,14 +23,15 @@ router.post('/login-api', async (req, res) => {
 
   output.success = req.body.password == row['password'] ? true : false;
   if (output.success) {
-    const { sid, name } = row;
+    const { sid, name, member_photo } = row;
 
-    const token = jwt.sign({ sid, name }, process.env.JWT_SECRET);
+    const token = jwt.sign({ sid, name, member_photo }, process.env.JWT_SECRET);
 
     output.auth = {
       sid,
       name,
       token,
+      member_photo,
     };
     res.json(output);
   }
@@ -53,7 +54,7 @@ router.post('/add', upload.single('member_photo'), async (req, res) => {
     req.body.account,
     req.body.gender || null,
     req.body.password,
-    req.file.originalname,
+    req.file.filename,
     req.body.city || null,
     req.body.area || null,
     req.body.address || null,
@@ -63,7 +64,7 @@ router.post('/add', upload.single('member_photo'), async (req, res) => {
   ]);
 
   //affectedRows有影響的列數
-  console.log(result);
+  // console.log(req);
 
   if (result.affectedRows) output.success = true;
   res.json(output);
@@ -97,7 +98,7 @@ async function getClinicData(req, res) {
   console.log(sid);
   let rows = [];
 
-  const sql = `SELECT * FROM \`reserve_data\` rd LEFT JOIN \`clinic_data\` cd ON cd.sid = rd.clinic_sid ${where}`;
+  const sql = `SELECT * FROM \`reserve_data\` rd LEFT JOIN \`clinic_data\` cd ON cd.sid = rd.clinic_sid LEFT JOIN \`code_data\` od ON cd.code=od.sid ${where} ORDER BY date DESC`;
 
   [rows] = await db.query(sql);
 
