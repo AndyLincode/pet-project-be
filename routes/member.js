@@ -95,7 +95,7 @@ async function getClinicData(req, res) {
   if (sid) {
     where = `WHERE rd.member_sid = ${sid}`;
   }
-  console.log(sid);
+  // console.log(sid);
   let rows = [];
 
   const sql = `SELECT * FROM \`reserve_data\` rd LEFT JOIN \`clinic_data\` cd ON cd.sid = rd.clinic_sid LEFT JOIN \`code_data\` od ON cd.code=od.sid ${where} ORDER BY date DESC`;
