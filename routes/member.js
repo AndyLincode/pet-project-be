@@ -3,13 +3,13 @@ const router = express.Router();
 const db = require(__dirname + '/../modules/db_connect');
 const moment = require('moment-timezone'); // 日期格式(選擇性)
 const upload = require(__dirname + '/../modules/upload-img');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const fs = require('fs').promises;
 
 router.post('/login-api', async (req, res) => {
   const output = {
     success: false,
-    error: '帳密錯誤',
+    error: '',
     postData: req.boby, //除錯用
     auth: {},
   };
@@ -20,29 +20,24 @@ router.post('/login-api', async (req, res) => {
     return res.json(output);
   }
   const row = rows[0];
-  const token = jwt.sign(
-    {
-      sid: row.sid,
-      account: row.account,
-    },
-    'lasdkf39485349hflskdfsdklfsk'
-  );
-  //判斷密碼在資料庫
-  output.success = req.body.password === row.password;
+
+  output.success = req.body.password == row['password'] ? true : false;
   if (output.success) {
-    output.error = '';
-    output.auth = { row: row, token: token, login: true };
+    const { sid, name } = row;
+
+    const token = jwt.sign({ sid, name }, process.env.JWT_SECRET);
+
+    output.auth = {
+      sid,
+      name,
+      token,
+    };
+    res.json(output);
   }
-  /*
-  output.success = await bcrypt.compare(
-    req.body.password,
-    row['password_hash']
-  );
-  */
-  res.json(output);
 });
+
 //會員新增資料
-router.post('/add', upload.none(), async (req, res) => {
+router.post('/add', upload.single('member_photo'), async (req, res) => {
   const output = {
     success: false,
     code: 0,
@@ -51,29 +46,26 @@ router.post('/add', upload.none(), async (req, res) => {
   };
 
   const sql =
-    'INSERT INTO `members_data`(`name`, `account`, `gender`, `password`,`city`,`area`,`address`, `create_at`) VALUES (?,?,?,?,?,?,?,NOW())';
+    'INSERT INTO `members_data`(`name`, `account`, `gender`, `password`,`member_photo`,`city`,`area`,`address`,`birthday`, `email`, `mobile`, `create_at`) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())';
+
   const [result] = await db.query(sql, [
     req.body.name,
     req.body.account,
-    req.body.gender,
+    req.body.gender || null,
     req.body.password,
-    // req.body.photo,
-    req.body.city,
-    req.body.area,
-    req.body.address,
-  ]);
-  const sql2 =
-    'INSERT INTO `contact_data`(`birthday`, `email`, `mobile`, `create_at`) VALUES (?,?,?,NOW())';
-  const [result2] = await db.query(sql2, [
-    req.body.birthday,
-    req.body.email,
-    req.body.mobile,
+    req.file.originalname,
+    req.body.city || null,
+    req.body.area || null,
+    req.body.address || null,
+    req.body.birthday || null,
+    req.body.email || null,
+    req.body.mobile || null,
   ]);
 
   //affectedRows有影響的列數
   console.log(result);
-  console.log(result2);
-  if (result.affectedRows && result2.affectedRows) output.success = true;
+
+  if (result.affectedRows) output.success = true;
   res.json(output);
 });
 
@@ -94,5 +86,73 @@ router.get('/data', async (req, res) => {
   const [rows] = await db.query(sql);
   res.json(rows);
 });
+
+//抓掛號預約資料
+async function getClinicData(req, res) {
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+
+  if (sid) {
+    where = `WHERE rd.member_sid = ${sid}`;
+  }
+  console.log(sid);
+  let rows = [];
+
+  const sql = `SELECT * FROM \`reserve_data\` rd LEFT JOIN \`clinic_data\` cd ON cd.sid = rd.clinic_sid ${where}`;
+
+  [rows] = await db.query(sql);
+
+  return { rows };
+}
+
+//抓城市資料
+async function getCityData() {
+  //全部的資料
+  let where = `WHERE 1`;
+  let rows = [];
+  const sql = `SELECT cd.* FROM \`city_data\` cd ${where} ORDER BY cd.sid ASC`;
+  [rows] = await db.query(sql);
+
+  return { rows };
+}
+//抓地區資料
+async function getAreaData() {
+  //全部的資料
+  let where = `WHERE 1`;
+  let rows = [];
+  const sql = `SELECT ad.* FROM \`area_data\` ad ${where} ORDER BY ad.sid ASC`;
+  [rows] = await db.query(sql);
+
+  return { rows };
+}
+
+//抓城市資料
+router.get('/citydata', async (req, res) => {
+  res.json(await getCityData(req, res));
+});
+//抓地區資料
+router.get('/areadata', async (req, res) => {
+  res.json(await getAreaData(req, res));
+});
+//抓會員寵物資料
+router.get('/petdata', async (req, res) => {});
+
+//抓文章收藏資料
+router.get('/articledata', async (req, res) => {});
+
+//抓商品收藏資料
+router.get('/productdata', async (req, rs) => {});
+
+//抓診所掛號資料
+router.get('/clinicdata/:sid', async (req, res) => {
+  res.json(await getClinicData(req, res));
+});
+
+//抓攝影訂單資料
+router.get('/orderphotodata', async (req, res) => {});
+
+//抓商品訂單資料
+router.get('/orderproductdata', async (req, res) => {});
+
+//修改會員資料
 
 module.exports = router;
