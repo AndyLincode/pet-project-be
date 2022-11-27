@@ -55,7 +55,7 @@ router.post('/login-api', async (req, res) => {
 });
 
 // 資料表導入(products)
-async function getListData(req) {
+async function getListData(req, res) {
   const perPage = 16;
   let page = +req.query.page || 1;
   // trim() 去除空白
