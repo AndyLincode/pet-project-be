@@ -78,11 +78,17 @@ router.put('/edit', upload.single('member_photo'), async (req, res) => {
     code: 0,
     error: {},
     postData: req.body, // 除錯用
-    img:req ? req.file.filename:'',
+    img: '',
   };
 
   const sql =
     'UPDATE `members_data` SET `name`=?,`email`=?,`mobile`=?,`birthday`=?,`city`=?,`area`=?,`address`=?,`gender`=?,`member_photo`=? WHERE `sid`=?';
+
+  if (req.body.member_photo === '') {
+    avatar = null;
+  } else {
+    avatar = req.file.filename;
+  }
 
   const [result] = await db.query(sql, [
     req.body.name,
@@ -93,11 +99,12 @@ router.put('/edit', upload.single('member_photo'), async (req, res) => {
     req.body.area,
     req.body.address,
     req.body.gender,
-    req.file.filename,
+    avatar,
     req.body.sid,
   ]);
 
   if (result.changedRows) output.success = true;
+  if (req.body.member_photo !== '') output.img = req.file.filename;
 
   res.json(output);
 });
