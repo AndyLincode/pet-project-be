@@ -7,8 +7,9 @@ const fs = require('fs').promises
 // app.set('view engine', 'ejs')
 const cors = require('cors');
 const multer = require('multer');
+const dotenv =require('dotenv')
 
-
+dotenv.config();
 // top middleware
 app.use(cors());
 // header 解析
