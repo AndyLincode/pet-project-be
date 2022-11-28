@@ -240,11 +240,14 @@
     "object-assign" "^4"
     "vary" "^1"
 
+<<<<<<< HEAD
 "dayjs@^1.11.6":
   "integrity" "sha512-zZbY5giJAinCG+7AGaw0wIhNZ6J8AhWuSXKvuc1KAyMiRsvGQWqh4L+MomvhdAYjN+lqvVCMq1I41e3YHvXkyQ=="
   "resolved" "https://registry.npmjs.org/dayjs/-/dayjs-1.11.6.tgz"
   "version" "1.11.6"
 
+=======
+>>>>>>> kunda_m
 "debug@^3.2.7":
   "integrity" "sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ=="
   "resolved" "https://registry.npmjs.org/debug/-/debug-3.2.7.tgz"

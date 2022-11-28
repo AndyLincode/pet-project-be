@@ -7,7 +7,9 @@ const fs = require('fs').promises
 // app.set('view engine', 'ejs')
 const cors = require('cors');
 const multer = require('multer');
+const dotenv =require('dotenv')
 
+dotenv.config();
 // top middleware
 app.use(cors());
 // header 解析
@@ -47,11 +49,15 @@ app.use('/member', memberRouter);
 const cartRouter = require(__dirname + '/routes/cart');
 app.use('/cart', cartRouter);
 
+app.use(express.static('public'))
+
 // --------404-------------
 
 app.use((req, res) => {
   res.status(404).send('Error! NOT FOUND');
 });
+
+
 
 const port = process.env.SERVER_PORT || 6002
 
