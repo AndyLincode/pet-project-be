@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const db = require(__dirname + '/../modules/db_connect');
 const moment = require('moment-timezone'); // 日期格式(選擇性)
-const upload = require(__dirname + '/../modules/upload-img');
+const upload = require(__dirname + '/../modules/upload_img');
 const jwt = require('jsonwebtoken');
 const fs = require('fs').promises;
+const SqlString = require('sqlstring');
 const nodemailer = require('nodemailer');
 
 router.post('/login-api', async (req, res) => {
@@ -236,6 +237,22 @@ async function getAreaData() {
   return { rows };
 }
 
+// 抓收藏列表
+async function getLovedList(req) {
+  const m_sid = +req.query.m_sid;
+
+  // 判斷登入
+  if (!m_sid) {
+    return res.json({ message: '請先登入', code: '401' });
+  }
+
+  const sql = `SELECT pl.*, p.img, p.name, p.price, p.member_price FROM product_loved pl JOIN products p ON p.sid=pl.p_sid WHERE pl.m_sid=?`;
+  const formatSql = SqlString.format(sql, [m_sid]);
+  let rows = [];
+  [rows] = await db.query(formatSql);
+  return { rows };
+}
+
 //抓城市資料
 router.get('/citydata', async (req, res) => {
   res.json(await getCityData(req, res));
@@ -256,7 +273,9 @@ router.get('/petdata', async (req, res) => {});
 router.get('/articledata', async (req, res) => {});
 
 //抓商品收藏資料
-router.get('/productdata', async (req, rs) => {});
+router.get('/productdata', async (req, res) => {
+  res.json(await getLovedList(req));
+});
 
 //抓診所掛號資料
 router.get('/clinicdata/:sid', async (req, res) => {

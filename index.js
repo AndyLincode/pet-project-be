@@ -25,6 +25,13 @@ app.get('/', (req, res, next) => {
   res.json('<h2>首頁</h2>');
 });
 
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+
+app.post(multer().none(), async (req, res) => {
+  next();
+});
+
 // 以下新增路由 (請做備註)
 //裕庭新增商品路由
 const productRouter = require(__dirname + '/routes/product');

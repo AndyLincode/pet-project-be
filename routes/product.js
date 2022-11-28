@@ -55,7 +55,7 @@ router.post('/login-api', async (req, res) => {
 });
 
 // 資料表導入(products)
-async function getListData(req) {
+async function getListData(req, res) {
   const perPage = 16;
   let page = +req.query.page || 1;
   // trim() 去除空白
@@ -146,7 +146,7 @@ async function getListData(req) {
   };
 }
 
-// 商品細節頁
+// 商品細節頁 + 相關商品 + 評論
 async function getProductData(req) {
   let where = `WHERE 1`;
 
@@ -156,33 +156,50 @@ async function getProductData(req) {
     where = `WHERE p.sid =${sid}`;
   }
 
-  const t_sql = `SELECT COUNT(1) totalRows, AVG(pr.scores) avgScores FROM \`products\` p JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}`;
-  const [[{ totalRows, avgScores }]] = await db.query(t_sql);
+  const t_sql = `SELECT  AVG(pr.scores) avgScores FROM \`products\` p JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}`;
+  const [[{ avgScores }]] = await db.query(t_sql);
 
   let totalPages = 0;
   let rows = [];
-  if (totalRows > 0) {
-    const sql = `SELECT p.*, pc.name cname, pr.*  FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}  `;
 
-    // const r_sql = `SELECT * FROM products WHERE category= ORDER by RAND()  limit 4`
+  const sql = `SELECT p.*, pc.name cname  FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}  `;
 
-    [rows] = await db.query(sql);
-  }
+  [rows] = await db.query(sql);
 
   // 相關商品 (亂數抓取)
-  if (rows) {
+  if (rows[0]) {
     const r_sql = `SELECT * FROM products WHERE category=${rows[0].category} AND sid!=${rows[0].sid} ORDER by RAND()  limit 5`;
 
     [related_p] = await db.query(r_sql);
   }
 
+  // 評論
+  if (rows[0]) {
+    const c_sql = `SELECT pr.*, m.member_photo FROM \`product_comment_try\` pr JOIN members_data m ON m.sid=pr.m_sid WHERE pr.p_sid=${sid}`;
+
+    [comment] = await db.query(c_sql);
+  }
+
   return {
-    totalRows,
     avgScores,
     totalPages,
     rows,
     related_p,
+    comment,
     query: req.query,
+  };
+}
+
+// 歷史瀏覽
+async function getHistory(req) {
+  let sid = req.query.sid ? req.query.sid.trim() : 0;
+
+  const sql = `SELECT * FROM products WHERE sid=${sid}`;
+
+  [history_p] = await db.query(sql);
+
+  return {
+    history_p,
   };
 }
 
@@ -227,11 +244,6 @@ async function getPhotographers(req) {
 }
 
 // R
-// router.get('/', async (req, res) => {
-//   // 商品主頁
-
-// });
-
 // 取得分類傳至react呈現
 router.get('/c-json', async (req, res) => {
   // 商品分類
@@ -256,6 +268,14 @@ router.get('/detail/:sid', async (req, res) => {
 
   res.json(data);
 });
+
+//抓瀏覽紀錄
+router.get('/history', async (req, res) => {
+  const data = await getHistory(req);
+
+  res.json(data);
+});
+
 // 攝影師資訊
 router.get('/photographers-json', async (req, res) => {
   const data = await getPhotographers(req);
