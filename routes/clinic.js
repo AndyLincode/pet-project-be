@@ -44,7 +44,7 @@ async function getCityData() {
   //全部的資料
   let where = `WHERE 1`;
   let rows = [];
-  const sql = `SELECT cd.* FROM \`city_data\` cd ${where} ORDER BY cd.sid ASC`;
+  const sql = `SELECT cd.* FROM \`city_data\` cd ${where} `;
   [rows] = await db.query(sql);
 
   return { rows };
@@ -54,7 +54,7 @@ async function getAreaData() {
   //全部的資料
   let where = `WHERE 1`;
   let rows = [];
-  const sql = `SELECT ad.* FROM \`area_data\` ad ${where} ORDER BY ad.sid ASC`;
+  const sql = `SELECT ad.* FROM \`area_data\` ad ${where} `;
   [rows] = await db.query(sql);
 
   return { rows };
@@ -68,7 +68,7 @@ async function getMemberData(req, res) {
 
   let rows = [];
 
-  const t_sql = `SELECT md.*,cd.*,ad.* FROM \`members_data\` md LEFT JOIN \`contact_data\` cd  ON md.sid=cd.sid LEFT JOIN \`address_data\` ad ON md.sid=ad.sid ${where}`;
+  const t_sql = `SELECT md.* FROM \`members_data\` md ${where}`;
 
   [rows] = await db.query(t_sql);
 
@@ -86,6 +86,32 @@ async function getPetData(req, res) {
 
   [rows] = await db.query(t_sql);
 
+  return { rows };
+}
+
+async function getCityName(req, res) {
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+
+  let where = `WHERE cd.sid = ${sid}`;
+
+  let rows = [];
+
+  const sql = `SELECT * FROM \`city_data\` cd ${where}`;
+
+  [rows] = await db.query(sql);
+  return { rows };
+}
+
+async function getAreaName(req, res) {
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+
+  let where = `WHERE ad.sid = ${sid}`;
+
+  let rows = [];
+
+  const sql = `SELECT * FROM \`area_data\` ad ${where}`;
+
+  [rows] = await db.query(sql);
   return { rows };
 }
 
@@ -150,17 +176,17 @@ router.post('/payment', (req, res) => {
     rtnMsg: rtnMsg,
     paymentDate: paymentDate,
     paymentType: paymentType,
-    tradeAmt: tradeAmt
-  }
+    tradeAmt: tradeAmt,
+  };
 
   //(添加simulatePaid模擬付款的判斷 1為模擬付款 0 為正式付款)
   //測試環境
-  if (rtnCode === "1" && simulatePaid === "1") {
+  if (rtnCode === '1' && simulatePaid === '1') {
     // 這部分可與資料庫做互動
-    res.write("1|OK");
+    res.write('1|OK');
     res.end();
   }
-})
+});
 
 //新增資料
 
@@ -213,6 +239,14 @@ router.get('/member/:sid', async (req, res) => {
 
 router.get('/pet/:sid', async (req, res) => {
   res.json(await getPetData(req, res));
+});
+
+router.get('/cityname/:sid', async (req, res) => {
+  res.json(await getCityName(req, res));
+});
+
+router.get('/areaname/:sid', async (req, res) => {
+  res.json(await getAreaName(req, res));
 });
 
 router.post('/login-api', async (req, res) => {
