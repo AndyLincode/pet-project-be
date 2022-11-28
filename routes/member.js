@@ -79,6 +79,7 @@ router.put('/edit', upload.single('member_photo'), async (req, res) => {
     code: 0,
     error: {},
     postData: req.body, // 除錯用
+    img:req ? req.file.filename:'',
   };
 
   const sql =
@@ -103,7 +104,7 @@ router.put('/edit', upload.single('member_photo'), async (req, res) => {
 });
 
 //MAIL
-router.post('/send', upload.none(),async (req, res) => {
+router.post('/send', upload.none(), async (req, res) => {
   try {
     const { name, mail, phone } = req.body;
 
@@ -156,7 +157,7 @@ router.post('/send', upload.none(),async (req, res) => {
 
     Email(options);
 
-    res.json({ msg: 'Your message sent successfully'});
+    res.json({ msg: 'Your message sent successfully' });
   } catch (error) {
     res.json({ msg: 'Error ' });
   }
