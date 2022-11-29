@@ -7,7 +7,9 @@ const fs = require('fs').promises;
 // app.set('view engine', 'ejs')
 const cors = require('cors');
 const multer = require('multer');
+const dotenv =require('dotenv')
 
+dotenv.config();
 // top middleware
 app.use(cors());
 // header 解析
@@ -101,6 +103,7 @@ io.on('connection', (socket) => {
     socket.to(data.room).emit('receive_message', data);
   });
 });
+app.use(express.static('public'))
 
 // --------404-------------
 
