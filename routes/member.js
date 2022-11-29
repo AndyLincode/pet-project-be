@@ -9,6 +9,7 @@ const SqlString = require('sqlstring');
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const keys = require(__dirname + '/../client_secret.json');
+const dayjs = require('dayjs');
 
 router.post('/login-api', async (req, res) => {
   const output = {
@@ -48,7 +49,7 @@ const oAuth2c = new OAuth2Client(
   keys.web.client_secret,
   keys.web.redirect_uris[1]
 );
-//建立連結URL
+// //建立連結URL
 router.get('/login', async (req, res, next) => {
   const authorizeUrl = oAuth2c.generateAuthUrl({
     access_type: 'offline',
@@ -61,7 +62,7 @@ router.get('/login', async (req, res, next) => {
   res.render('login', { title: '點擊連結登入', authorizeUrl });
 });
 
-//利用tokens取得資料
+// //利用tokens取得資料
 router.get('/callback', async (req, res, next) => {
   const qs = req.query;
   if (qs.code) {
@@ -92,12 +93,18 @@ router.post('/add', upload.single('member_photo'), async (req, res) => {
   const sql =
     'INSERT INTO `members_data`(`name`, `account`, `gender`, `password`,`member_photo`,`city`,`area`,`address`,`birthday`, `email`, `mobile`, `create_at`) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())';
 
+  if (req.body.member_photo === 'noname.png') {
+    avatar = req.body.member_photo;
+  } else {
+    avatar = req.file.filename;
+  }
+
   const [result] = await db.query(sql, [
     req.body.name,
     req.body.account,
     req.body.gender || null,
     req.body.password,
-    req.file.filename,
+    avatar,
     req.body.city || null,
     req.body.area || null,
     req.body.address || null,
@@ -127,7 +134,7 @@ router.put('/edit', upload.single('member_photo'), async (req, res) => {
     'UPDATE `members_data` SET `name`=?,`email`=?,`mobile`=?,`birthday`=?,`city`=?,`area`=?,`address`=?,`gender`=?,`member_photo`=? WHERE `sid`=?';
 
   if (req.body.member_photo === '') {
-    avatar = null;
+    avatar = 'noname.png';
   } else {
     avatar = req.file.filename;
   }
@@ -136,7 +143,7 @@ router.put('/edit', upload.single('member_photo'), async (req, res) => {
     req.body.name,
     req.body.mail,
     req.body.mobile,
-    req.body.birthday || null,
+    req.body.birthday,
     req.body.city,
     req.body.area,
     req.body.address,
@@ -152,64 +159,64 @@ router.put('/edit', upload.single('member_photo'), async (req, res) => {
 });
 
 //MAIL
-router.post('/send', upload.none(), async (req, res) => {
-  try {
-    const { name, mail, phone } = req.body;
+// router.post('/send', upload.none(), async (req, res) => {
+//   try {
+//     const { name, mail, phone } = req.body;
 
-    const options = {
-      from: `PetBen 🛍️ <${process.env.USER}>`,
-      to: `<${mail}>`,
-      subject: 'Message From Shoeshop Store',
-      html: `
-            <div style="width: 100%; background-color: #f3f9ff; padding: 5rem 0">
-            <div style="max-width: 700px; background-color: white; margin: 0 auto">
-              <div style="width: 100%; background-color: #00efbc; padding: 20px 0">          
-              </div>
-              <div style="width: 100%; gap: 10px; padding: 30px 0; display: grid">
-                <p style="font-weight: 800; font-size: 1.2rem; padding: 0 30px">
-                  Form Shoeshop Store
-                </p>
-                <div style="font-size: .8rem; margin: 0 30px">
-                  <p>FullName: <b>${name}</b></p>
-                  <p>Email: <b>${mail}</b></p>
-                  <p>Phone: <b>${phone}</b></p>
-                  <p>Message: <i>歡迎你加入PetBen</i></p>
-                </div>
-              </div>
-            </div>
-          </div>
-            `,
-    };
-    const Email = (options) => {
-      let transpoter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secureConnection: true,
-        auth: {
-          type: 'OAuth2',
-          user: process.env.USER,
-          clientId: process.env.CLIENT_ID,
-          clientSecret: process.env.CLIENT_SECRET,
-          refreshToken: process.env.REFRESH_TOKEN,
-          accessToken: process.env.ACCESS_TOKEN,
-          expires: 1484314697598,
-        },
-      });
-      transpoter.sendMail(options, (err, info) => {
-        if (err) {
-          console.log(err);
-          return;
-        }
-      });
-    };
+//     const options = {
+//       from: `PetBen 🛍️ <${process.env.USER}>`,
+//       to: `<${mail}>`,
+//       subject: 'Message From Shoeshop Store',
+//       html: `
+//             <div style="width: 100%; background-color: #f3f9ff; padding: 5rem 0">
+//             <div style="max-width: 700px; background-color: white; margin: 0 auto">
+//               <div style="width: 100%; background-color: #00efbc; padding: 20px 0">
+//               </div>
+//               <div style="width: 100%; gap: 10px; padding: 30px 0; display: grid">
+//                 <p style="font-weight: 800; font-size: 1.2rem; padding: 0 30px">
+//                   Form Shoeshop Store
+//                 </p>
+//                 <div style="font-size: .8rem; margin: 0 30px">
+//                   <p>FullName: <b>${name}</b></p>
+//                   <p>Email: <b>${mail}</b></p>
+//                   <p>Phone: <b>${phone}</b></p>
+//                   <p>Message: <i>歡迎你加入PetBen</i></p>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//             `,
+//     };
+//     const Email = (options) => {
+//       let transpoter = nodemailer.createTransport({
+//         host: 'smtp.gmail.com',
+//         port: 465,
+//         secureConnection: true,
+//         auth: {
+//           type: 'OAuth2',
+//           user: process.env.USER,
+//           clientId: process.env.CLIENT_ID,
+//           clientSecret: process.env.CLIENT_SECRET,
+//           refreshToken: process.env.REFRESH_TOKEN,
+//           accessToken: process.env.ACCESS_TOKEN,
+//           expires: 1484314697598,
+//         },
+//       });
+//       transpoter.sendMail(options, (err, info) => {
+//         if (err) {
+//           console.log(err);
+//           return;
+//         }
+//       });
+//     };
 
-    Email(options);
+//     Email(options);
 
-    res.json({ msg: 'Your message sent successfully' });
-  } catch (error) {
-    res.json({ msg: 'Error ' });
-  }
-});
+//     res.json({ msg: 'Your message sent successfully' });
+//   } catch (error) {
+//     res.json({ msg: 'Error ' });
+//   }
+// });
 
 //刪除寵物資料
 router.delete('/del/:sid', async (req, res) => {

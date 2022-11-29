@@ -11,3 +11,4 @@ package-lock.json
 
 .gitignore
 yarn.lock
+client_secret.json
