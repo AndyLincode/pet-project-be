@@ -7,6 +7,8 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs').promises;
 const SqlString = require('sqlstring');
 const nodemailer = require('nodemailer');
+const { OAuth2Client } = require('google-auth-library');
+const keys = require(__dirname + '/../client_secret.json');
 
 router.post('/login-api', async (req, res) => {
   const output = {
@@ -37,6 +39,45 @@ router.post('/login-api', async (req, res) => {
     };
     res.json(output);
   }
+});
+
+//google登入
+//使用OAuth2Client
+const oAuth2c = new OAuth2Client(
+  keys.web.client_id,
+  keys.web.client_secret,
+  keys.web.redirect_uris[1]
+);
+//建立連結URL
+router.get('/login', async (req, res, next) => {
+  const authorizeUrl = oAuth2c.generateAuthUrl({
+    access_type: 'offline',
+    // 欲取得 email, 要兩個 scopes
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email',
+    ],
+  });
+  res.render('login', { title: '點擊連結登入', authorizeUrl });
+});
+
+//利用tokens取得資料
+router.get('/callback', async (req, res, next) => {
+  const qs = req.query;
+  if (qs.code) {
+    const r = await oAuth2c.getToken(qs.code);
+    oAuth2c.setCredentials(r.tokens);
+    const url =
+      'https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses,photos';
+
+    // console.log(
+    //   `https://oauth2.googleapis.com/tokeninfo?id_token=${r.tokens.id_token}`
+    // );
+    const response = await oAuth2c.request({ url });
+
+    myData = response.data;
+  }
+  res.render('callback', { title: 'Callback result', qs, myData });
 });
 
 //會員新增資料

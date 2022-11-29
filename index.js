@@ -3,15 +3,20 @@ const express = require('express');
 const app = express();
 const db = require(__dirname + '/modules/db_connect');
 //讀寫檔案
-const fs = require('fs').promises
-// app.set('view engine', 'ejs')
+const fs = require('fs').promises;
+
 const cors = require('cors');
 const multer = require('multer');
-const dotenv =require('dotenv')
+
+const dotenv = require('dotenv');
+
 
 dotenv.config();
+
+
+app.set('view engine', 'ejs')
 // top middleware
-app.use(cors());
+
 // header 解析
 app.use(express.urlencoded({ extended: false }));
 // 解析 JSON
@@ -49,7 +54,7 @@ app.use('/member', memberRouter);
 const cartRouter = require(__dirname + '/routes/cart');
 app.use('/cart', cartRouter);
 
-app.use(express.static('public'))
+app.use(express.static('public'));
 
 // --------404-------------
 
@@ -57,8 +62,6 @@ app.use((req, res) => {
   res.status(404).send('Error! NOT FOUND');
 });
 
+const port = process.env.SERVER_PORT || 6002;
 
-
-const port = process.env.SERVER_PORT || 6002
-
-app.listen(port, () => console.log(`server started, port:${port}`))
+app.listen(port, () => console.log(`server started, port:${port}`));
