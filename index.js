@@ -7,7 +7,7 @@ const fs = require('fs').promises;
 // app.set('view engine', 'ejs')
 const cors = require('cors');
 const multer = require('multer');
-const dotenv =require('dotenv')
+const dotenv = require('dotenv');
 
 dotenv.config();
 // top middleware
@@ -62,7 +62,7 @@ const server = require('http')
 const io = require('socket.io')(server, {
   // cors 讓 localhost 可跨 port 連接
   cors: {
-    origin: '*',
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
   },
 });
 
@@ -93,7 +93,7 @@ io.on('connection', (socket) => {
   //   // 發送給在 room 中所有的 client
   //   // io.sockets.in(room).emit('addRoom', '已加入聊天室!');
   // });
-  console.log(`User Connected: ${socket.id}`);
+  // console.log(`User Connected: ${socket.id}`);
 
   socket.on('join_room', (data) => {
     socket.join(data);
@@ -103,7 +103,7 @@ io.on('connection', (socket) => {
     socket.to(data.room).emit('receive_message', data);
   });
 });
-app.use(express.static('public'))
+app.use(express.static('public'));
 
 // --------404-------------
 
