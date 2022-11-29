@@ -7,7 +7,7 @@ const fs = require('fs').promises;
 // app.set('view engine', 'ejs')
 const cors = require('cors');
 const multer = require('multer');
-const dotenv =require('dotenv')
+const dotenv = require('dotenv');
 
 dotenv.config();
 // top middleware
@@ -66,6 +66,10 @@ const io = require('socket.io')(server, {
   },
 });
 
+const CHAT_BOT = 'ChatBot';
+let chatRoom = '';
+let allUsers = [];
+
 // 監聽 Server 連線後的所有事件，並捕捉事件 socket 執行
 io.on('connection', (socket) => {
   // // 連線成功，印出訊息
@@ -96,14 +100,27 @@ io.on('connection', (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
   socket.on('join_room', (data) => {
-    socket.join(data);
+    const { username, room } = data;
+    socket.join(room);
+
+    let __createdtime__ = Date.now();
+    socket.to(room).emit('receive_message', {
+      message: `${username} has joined the room!`,
+      username: CHAT_BOT,
+      __createdtime__,
+    });
+    chatRoom = room;
+    allUsers.push({ id: socket.id, username, room });
+    chatRoomUsers = allUsers.filter((user) => user.room === room);
+    socket.to(room).emit('chatroom_users', chatRoomUsers);
+    socket.emit('chatroom_users', chatRoomUsers);
   });
 
   socket.on('send_message', (data) => {
     socket.to(data.room).emit('receive_message', data);
   });
 });
-app.use(express.static('public'))
+app.use(express.static('public'));
 
 // --------404-------------
 
