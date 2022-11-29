@@ -38,8 +38,9 @@ router.post('/login-api', async (req, res) => {
       token,
       member_photo,
     };
-    res.json(output);
+    
   }
+  res.json(output);
 });
 
 //google登入
