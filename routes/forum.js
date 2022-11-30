@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require(__dirname + '/../modules/db_connect');
+const upload = require(__dirname + '/../modules/upload_img');
 
 async function getArticles(req, res) {
   // 抓文章
@@ -42,6 +43,26 @@ router.get('/details', async (req, res) => {
   const data = await getArticleDetail(req, res);
 
   res.json(data);
+});
+
+router.post('/forum_post', upload.none(), async (req, res) => {
+  const output = {
+    success: false,
+    code: 0,
+    error: {},
+    postData: req.body,
+  };
+  console.log(req.body.title);
+  const messSql =
+    'INSERT INTO `article`( `title`, `category`, `content`, `m_sid`,  `created_at`) VALUES (?,?,?,?,NOW())';
+  const [result] = await db.query(messSql, [
+    req.body.title,
+    req.body.category,
+    req.body.content,
+    req.body.m_sid,
+  ]);
+  if (result.affectedRows) output.success = true;
+  res.json(output);
 });
 
 module.exports = router;
