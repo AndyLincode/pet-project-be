@@ -122,7 +122,7 @@ async function getListData(req, res) {
   const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid  ${where}  `;
   const [[{ totalRows }]] = await db.query(t_sql);
 
-  let totalPages = 0;
+  let totalPages = 1;
   let rows = [];
   if (totalRows > 0) {
     totalPages = Math.ceil(totalRows / perPage);
@@ -159,7 +159,6 @@ async function getProductData(req) {
   const t_sql = `SELECT  AVG(pr.scores) avgScores FROM \`products\` p JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}`;
   const [[{ avgScores }]] = await db.query(t_sql);
 
-  let totalPages = 0;
   let rows = [];
 
   const sql = `SELECT p.*, pc.name cname  FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}  `;
@@ -182,7 +181,6 @@ async function getProductData(req) {
 
   return {
     avgScores,
-    totalPages,
     rows,
     related_p,
     comment,
