@@ -105,14 +105,14 @@ io.on('connection', (socket) => {
   // });
   console.log(`User Connected: ${socket.id}`);
 
+  // Add a user to a room
   socket.on('join_room', (data) => {
-    const { username, room } = data;
-    socket.join(room);
+    const { username, room } = data; // Data sent from client when join_room event emitted
+    socket.join(room); // Join the user to a socket room
 
-    // let __createdtime__ = dayjs(Date.now());
     let __createdtime__ = Date.now();
-    // send msg to all users in the room when new user joined
-    socket.in(room).emit('receive_message', {
+    // send msg to all users in the room when new user that just joined
+    socket.to(room).emit('receive_message', {
       message: `${username} has joined the room!`,
       username: CHAT_BOT,
       __createdtime__,
