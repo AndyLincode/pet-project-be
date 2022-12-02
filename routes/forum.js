@@ -5,7 +5,7 @@ const upload = require(__dirname + '/../modules/upload_img');
 
 async function getArticles(req, res) {
   // 抓文章
-  const a_sql = `SELECT a.*,m.name user FROM \`article\` a JOIN members_data m ON a.m_sid=m.sid WHERE 1`;
+  const a_sql = `SELECT a.*,m.name user FROM \`article\` a JOIN members_data m ON a.m_sid=m.sid WHERE 1 ORDER BY article_sid DESC`;
 
   let rows = [];
   [rows] = await db.query(a_sql);
@@ -26,7 +26,7 @@ async function getArticleDetail(req, res) {
     where = `WHERE a.article_sid =${sid}`;
   }
   // 抓文章詳細
-  const sql = `SELECT a.*,m.name user FROM \`article\` a JOIN members_data m ON a.m_sid=m.sid ${where}`;
+  const sql = `SELECT a.*,m.name user FROM \`article\` a JOIN members_data m ON a.m_sid=m.sid ${where} `;
 
   let details = [];
   details = await db.query(sql);
@@ -61,7 +61,12 @@ router.post('/forum_post', upload.none(), async (req, res) => {
     req.body.content,
     req.body.m_sid,
   ]);
-  if (result.affectedRows) output.success = true;
+  console.log(result);
+  if (result.affectedRows) {
+    output.success = true;
+    output.sid = result.insertId;
+  }
+  console.log(output);
   res.json(output);
 });
 
