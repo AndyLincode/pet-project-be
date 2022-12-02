@@ -267,7 +267,7 @@ router.post('/sendpassword', upload.none(), async (req, res) => {
     const sql = 'UPDATE `members_data` SET `password` = ? WHERE `email`= ?';
     const [result] = await db.query(sql, [password, mail]);
 
-    res.json({ msg: 'Your message sent successfully' });
+    res.json({ msg: 'success' });
   } catch (error) {
     res.json({ msg: 'Error ' });
   }
@@ -333,19 +333,63 @@ router.post('/sendregister', upload.none(), async (req, res) => {
   }
 });
 
-//刪除寵物資料
-router.delete('/del/:sid', async (req, res) => {
-  const sql = 'DELETE FROM `pet_data` WHERE sid = ?';
-  const [result] = await db.query(sql, [req.params.sid]);
-  res.json(result);
+//新增寵物資料
+router.post('/addpet', upload.single('pet_photo'), async (req, res) => {
+  const output = {
+    success: false,
+    code: 0,
+    error: {},
+    postData: req.body,
+  };
+  const sql =
+    'INSERT INTO `pet_data`(`pet_pid`,`pet_name`,`Kind_of_pet`,`pet_gender`,`pet_birthday`,`member_sid`,`birth_control`,`pet_photo`) VALUES (?,?,?,?,?,?,?,?)';
+
+  if (req.body.pet_photo === 'cat_food.png' || 'dog_food.png') {
+    avatar = req.body.member_photo;
+  } else {
+    avatar = req.file.filename;
+  }
+
+  const [result] = await db.query(sql, [
+    req.body.pid,
+    req.body.name,
+    req.body.type,
+    req.body.gender,
+    req.body.birthday,
+    req.body.memberID,
+    req.body.control,
+    avatar,
+  ]);
+
+  if (result.affectedRows) output.success = true;
+  res.json(output);
 });
 
-//搜尋寵物資訊 傳回前端
-router.get('/data', async (req, res) => {
-  const sql = 'SELECT * FROM `pet_data`';
-  const [rows] = await db.query(sql);
-  res.json(rows);
+//刪除寵物資料
+router.delete('/delpet/:sid', async (req, res) => {
+  console.log(req.params.sid);
+  const sql = 'DELETE FROM `pet_data` WHERE sid = ?';
+  const [result] = await db.query(sql, [req.params.sid]);
+  console.log(result);
+  res.json({ success: !!result.affectedRows, result });
 });
+
+//抓寵物資料
+async function getPetData(req, res) {
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+
+  if (sid) {
+    where = `WHERE pd.member_sid = ${sid}`;
+  }
+
+  let rows = [];
+
+  const sql = `SELECT * FROM \`pet_data\` pd ${where}`;
+
+  [rows] = await db.query(sql);
+
+  return { rows };
+}
 
 //抓掛號預約資料
 async function getClinicData(req, res) {
@@ -416,6 +460,24 @@ async function getLovedList(req) {
   return { rows };
 }
 
+//抓攝影訂單資料
+async function getPhotoData(req, res) {
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+
+  if (sid) {
+    where = `WHERE od.member_sid = ${sid}`;
+  }
+
+  let rows = [];
+
+  const sql = `SELECT * FROM \`orders\` od LEFT JOIN \`photo_order_details\` opd ON od.orders_sid = opd.photo_order_sid ${where}`;
+
+  [rows] = await db.query(sql);
+
+  return { rows };
+}
+
+//抓商品訂單資料
 //抓城市資料
 router.get('/citydata', async (req, res) => {
   res.json(await getCityData(req, res));
@@ -430,7 +492,9 @@ router.get('/memberdata/:sid', async (req, res) => {
   res.json(await getMemberData(req, res));
 });
 //抓會員寵物資料
-router.get('/petdata', async (req, res) => {});
+router.get('/petdata/:sid', async (req, res) => {
+  res.json(await getPetData(req, res));
+});
 
 //抓文章收藏資料
 router.get('/articledata', async (req, res) => {});
@@ -446,10 +510,14 @@ router.get('/clinicdata/:sid', async (req, res) => {
 });
 
 //抓攝影訂單資料
-router.get('/orderphotodata', async (req, res) => {});
+router.get('/orderphotodata/:sid', async (req, res) => {
+  res.json(await getPhotoData(req, res));
+});
 
 //抓商品訂單資料
-router.get('/orderproductdata', async (req, res) => {});
+router.get('/orderproductdata', async (req, res) => {
+  res.json(await getProdectData(req, res));
+});
 
 //修改會員資料
 
