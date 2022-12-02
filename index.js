@@ -12,11 +12,10 @@ const dayjs = require('dayjs');
 
 dotenv.config();
 
-
-app.set('view engine', 'ejs')
+app.set('view engine', 'ejs');
 // top middleware
 
-app.use(cors())
+app.use(cors());
 // 解析Form表單
 app.post(multer().none(), async (req, res, next) => {
   next();
@@ -49,6 +48,9 @@ app.use('/member', memberRouter);
 //碩恩新增購物車路由
 const cartRouter = require(__dirname + '/routes/cart');
 app.use('/cart', cartRouter);
+// socket io 路由
+const socket = require(__dirname + '/routes/socket');
+app.use('/service', socket);
 
 // socket.io
 // 將 express 放進 http 中開啟 Server 的 6003 port ， 正確開啟後console印出訊息
@@ -75,7 +77,6 @@ const leaveRoom = require('./utils/leave-room');
 
 // 監聽 Server 連線後的所有事件，並捕捉事件 socket 執行
 io.on('connection', (socket) => {
-
   console.log(`User Connected: ${socket.id}`);
 
   // Add a user to a room
