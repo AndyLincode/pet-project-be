@@ -71,48 +71,21 @@ const io = require('socket.io')(server, {
 const CHAT_BOT = 'ChatBot';
 let chatRoom = '';
 let allUsers = [];
-
-function leaveRoom(userID, chatRoomUsers) {
-  return chatRoomUsers.filter((user) => user.id != userID);
-}
+const leaveRoom = require('./utils/leave-room');
 
 // 監聽 Server 連線後的所有事件，並捕捉事件 socket 執行
 io.on('connection', (socket) => {
-  // // 連線成功，印出訊息
-  // console.log('success connect!');
-  // // 監聽透過 connection 傳進來的事件
-  // socket.on('getMessage', (message) => {
-  //   // 只回傳 message 給發送訊息的 Client
-  //   socket.emit('getMessage', message);
-  // });
 
-  // // 回傳給所有連接著的 client
-  // socket.on('getMessageAll', (message) => {
-  //   io.sockets.emit('getMessageAll', message);
-  // });
+  console.log(`User Connected: ${socket.id}`);
 
-  // // 回傳給除了發送者外所有連接著的 client
-  // socket.on('getMessageLess', (message) => {
-  //   socket.broadcast.emit('getMessageLess', message);
-  // });
-
-  // socket.on('addRoom', (room) => {
-  //   socket.join(room);
-  //   // 發送給在同一個 room 中除了自己外的 client
-  //   socket.to(room).emit('addRoom', '有新人加入聊天室!');
-  //   // 發送給在 room 中所有的 client
-  //   // io.sockets.in(room).emit('addRoom', '已加入聊天室!');
-  // });
-  // console.log(`User Connected: ${socket.id}`);
-
+  // Add a user to a room
   socket.on('join_room', (data) => {
-    const { username, room } = data;
-    socket.join(room);
+    const { username, room } = data; // Data sent from client when join_room event emitted
+    socket.join(room); // Join the user to a socket room
 
-    // let __createdtime__ = dayjs(Date.now());
     let __createdtime__ = Date.now();
-    // send msg to all users in the room when new user joined
-    socket.in(room).emit('receive_message', {
+    // send msg to all users in the room when new user that just joined
+    socket.to(room).emit('receive_message', {
       message: `${username} has joined the room!`,
       username: CHAT_BOT,
       __createdtime__,
@@ -128,13 +101,14 @@ io.on('connection', (socket) => {
     chatRoom = room;
     allUsers.push({ id: socket.id, username, room });
     chatRoomUsers = allUsers.filter((user) => user.room === room);
-    socket.in(room).emit('chatroom_users', chatRoomUsers);
+    socket.to(room).emit('chatroom_users', chatRoomUsers);
     socket.emit('chatroom_users', chatRoomUsers);
   });
 
   socket.on('send_message', (data) => {
     const { message, username, room, __createdtime__ } = data;
-    socket.in(room).emit('receive_message', data);
+    io.in(room).emit('receive_message', data);
+    // TODO save msg into MySQL ?
   });
 
   // leave room
@@ -152,7 +126,21 @@ io.on('connection', (socket) => {
     });
     console.log(`${username} has left the chat`);
   });
+
+  // disconnect
+  socket.on('disconnect', () => {
+    console.log('User disconnected from the chat');
+    const user = allUsers.find((user) => user.id == socket.id);
+    if (user?.username) {
+      allUsers = leaveRoom(socket.id, allUsers);
+      socket.to(chatRoom).emit('chatroom_users', allUsers);
+      socket.to(chatRoom).emit('receive_message', {
+        message: `${user.username} has disconnected from the chat.`,
+      });
+    }
+  });
 });
+
 app.use(express.static('public'));
 
 // --------404-------------
