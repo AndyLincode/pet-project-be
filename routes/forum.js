@@ -30,8 +30,14 @@ async function getArticleDetail(req, res) {
 
   let details = [];
   details = await db.query(sql);
+  // 留言內容
+  // if (rows[0]) {
+  const c_sql = `SELECT r.*, m.member_photo FROM \`reply\` r JOIN members_data m ON m.sid=r.m_sid WHERE r.a_sid=${sid}`;
 
-  return { details };
+  [forum_comment] = await db.query(c_sql);
+  // }
+
+  return { details, forum_comment };
 }
 
 router.get('/articles', async (req, res) => {
@@ -45,6 +51,23 @@ router.get('/details', async (req, res) => {
   res.json(data);
 });
 
+// 回覆
+// const replySql =
+//   'INSERT INTO `reply`( `a_sid`, `m_sid`, `r_content`, `created_at`) VALUES (?,?,?,NOW())';
+// const [result] = await db.query(replySql, [
+//   req.body.a_sid,
+//   req.body.m_sid,
+//   req.body.r_content,
+// ]);
+// console.log(result);
+// if (result.affectedRows) {
+//   output.success = true;
+//   output.sid = result.insertId;
+// }
+// console.log(output);
+// res.json(output);
+
+// 發文
 router.post('/forum_post', upload.none(), async (req, res) => {
   const output = {
     success: false,
@@ -68,6 +91,12 @@ router.post('/forum_post', upload.none(), async (req, res) => {
   }
   console.log(output);
   res.json(output);
+});
+router.get('/allReply', async (req, res) => {
+  console.log(req.query.message, req.query.sid);
+  const sql = 'UPDATE `article` SET `a_reply`=? WHERE article_sid=? ';
+  const [rows] = await db.query(sql, [req.query.message, req.query.sid]);
+  res.json(rows);
 });
 
 module.exports = router;
