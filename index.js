@@ -11,12 +11,12 @@ const dotenv = require('dotenv');
 const dayjs = require('dayjs');
 
 dotenv.config();
+
+
+app.set('view engine', 'ejs')
 // top middleware
-app.use(cors());
-// header 解析
-app.use(express.urlencoded({ extended: false }));
-// 解析 JSON
-app.use(express.json());
+
+app.use(cors())
 // 解析Form表單
 app.post(multer().none(), async (req, res, next) => {
   next();
