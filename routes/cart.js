@@ -9,7 +9,9 @@ const uid = new ShortUniqueId({ length: 20 });
 const orderID = uid();
 
 //新增訂單資料
-router.post('/addOrder', upload.none, async (req, res) => {
+router.post('/addOrder', async (req, res) => {
+  // return res.json(req.body);
+
   const output = {
     order_total_success: false,
     photo_success: false,
@@ -20,21 +22,21 @@ router.post('/addOrder', upload.none, async (req, res) => {
   };
 
   const sqlOrders =
-    'INSERT INTO `orders`(`orders_sid`, `member_sid`, `photo_total_price`,`product_total_price`,`final_price`, `ordered_at`) VALUES (?,?,?,?,?,NOW())';
+    'INSERT INTO `orders`(`orders_num`, `member_sid`, `photo_total_price`,`product_total_price`,`final_price`, `ordered_at`) VALUES (?,?,?,?,?,NOW())';
   const [resultOrder] = await db.query(sqlOrders, [
     orderID,
     req.body.memberID,
-    req.body.photoPrice,
-    req.body.productPrice,
+    req.body.photo_totalPrice,
+    req.body.totalPrice,
     req.body.cartTotalPrice,
   ]);
 
   let resultPhotoOrderDetails = [];
   if (req.body.photoCart.length === 1) {
     // 攝影師新增訂單
-    for (let i = 0; i <= req.body.photoCart.length; i++) {
+    for (let i = 0; i < req.body.photoCart.length; i++) {
       const sqlPhotoOrderDetails =
-        'INSERT INTO `photo_order_details`(`photo_order_sid`, `photo_sid`, `photographer_img`, `photographer_name`, `date`, `day_parts`, `price`) VALUES (?,?,?,?,?,?,?)';
+        'INSERT INTO `photo_order_details`(`orders_num`, `photo_sid`, `photographer_img`, `photographer_name`, `date`, `day_parts`, `price`) VALUES (?,?,?,?,?,?,?)';
       [resultPhotoOrderDetails] = await db.query(sqlPhotoOrderDetails, [
         orderID,
         req.body.photoCart[i].sid,
@@ -46,15 +48,14 @@ router.post('/addOrder', upload.none, async (req, res) => {
       ]);
     }
   }
-  
+
   let resultOrderDetails = [];
-  if (req.body.productCart.length > 1) {
+  if (req.body.productCart.length >= 1) {
     // 商品新增訂單
-    for (let i = 0; i <= req.body.productCart.length; i++) {
-      const amount_total =
-        req.body.productCart[i].member_price * req.body.productCart[i].amount;
+    for (let i = 0; i < req.body.productCart.length; i++) {
+      
       const sqlOrderDetails =
-        'INSERT INTO `order_details`(`orders_sid`, `product_sid`, `product_img`, `product_name`, `price`, `amount`, `amount_total`) VALUES (?,?,?,?,?,?,?)';
+        'INSERT INTO `order_details`(`orders_num`, `product_sid`, `product_img`, `product_name`, `price`, `amount`, `amount_total`) VALUES (?,?,?,?,?,?,?)';
       [resultOrderDetails] = await db.query(sqlOrderDetails, [
         orderID,
         req.body.productCart[i].sid,
@@ -62,7 +63,7 @@ router.post('/addOrder', upload.none, async (req, res) => {
         req.body.productCart[i].name,
         req.body.productCart[i].member_price,
         req.body.productCart[i].amount,
-        amount_total,
+        req.body.productCart[i].member_price * req.body.productCart[i].amount,
       ]);
     }
   }
@@ -74,8 +75,14 @@ router.post('/addOrder', upload.none, async (req, res) => {
     resultOrder.affectedRows ||
     resultPhotoOrderDetails.affectedRows ||
     resultOrderDetails.affectedRows
-  )
+  ){
     output.success = true;
+    // order_total_success=true;
+    // photo_succes=true
+    // product_success=true
+  }
+    
+    
   res.json(output);
 });
 
