@@ -10,12 +10,11 @@ const multer = require('multer');
 const dotenv = require('dotenv');
 
 dotenv.config();
+
+app.set('view engine', 'ejs');
 // top middleware
+
 app.use(cors());
-// header 解析
-app.use(express.urlencoded({ extended: false }));
-// 解析 JSON
-app.use(express.json());
 // 解析Form表單
 app.post(multer().none(), async (req, res, next) => {
   next();
@@ -45,7 +44,7 @@ app.use('/forum', forumRouter);
 //品葳新增會員路由
 const memberRouter = require(__dirname + '/routes/member');
 app.use('/member', memberRouter);
-//碩恩新增購物車路由
+//碩恩新增購物車路由 merge後備份11/29
 const cartRouter = require(__dirname + '/routes/cart');
 app.use('/cart', cartRouter);
 
