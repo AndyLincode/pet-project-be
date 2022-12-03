@@ -21,38 +21,38 @@ const jwt = require('jsonwebtoken');
 //   res.redirect("/");
 // });
 
-router.post('/login-api', async (req, res) => {
-  const output = {
-    success: false,
-    error: '帳號或密碼錯誤',
-    postData: req.body, //除錯用
-    auth: {},
-  };
-  const sql = 'SELECT * FROM admins WHERE account=?';
-  const [rows] = await db.query(sql, [req.body.account]);
+// router.post('/login-api', async (req, res) => {
+//   const output = {
+//     success: false,
+//     error: '帳號或密碼錯誤',
+//     postData: req.body, //除錯用
+//     auth: {},
+//   };
+//   const sql = 'SELECT * FROM admins WHERE account=?';
+//   const [rows] = await db.query(sql, [req.body.account]);
 
-  if (!rows.length) {
-    return res.json(output);
-  }
+//   if (!rows.length) {
+//     return res.json(output);
+//   }
 
-  const row = rows[0];
-  console.log(row);
-  console.log(req.body.password);
+//   const row = rows[0];
+//   console.log(row);
+//   console.log(req.body.password);
 
-  output.success = req.body.password == row['password_hash'] ? true : false;
-  if (output.success) {
-    output.error = '';
-    const { sid, account } = row;
-    const token = jwt.sign({ sid, account }, process.env.JWT_SECRET);
-    output.auth = {
-      sid,
-      account,
-      token,
-    };
-  }
+//   output.success = req.body.password == row['password_hash'] ? true : false;
+//   if (output.success) {
+//     output.error = '';
+//     const { sid, account } = row;
+//     const token = jwt.sign({ sid, account }, process.env.JWT_SECRET);
+//     output.auth = {
+//       sid,
+//       account,
+//       token,
+//     };
+//   }
 
-  res.json(output);
-});
+//   res.json(output);
+// });
 
 // 資料表導入(products)
 async function getListData(req, res) {
@@ -122,7 +122,7 @@ async function getListData(req, res) {
   const t_sql = `SELECT COUNT(1) totalRows FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid  ${where}  `;
   const [[{ totalRows }]] = await db.query(t_sql);
 
-  let totalPages = 0;
+  let totalPages = 1;
   let rows = [];
   if (totalRows > 0) {
     totalPages = Math.ceil(totalRows / perPage);
@@ -159,7 +159,6 @@ async function getProductData(req) {
   const t_sql = `SELECT  AVG(pr.scores) avgScores FROM \`products\` p JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}`;
   const [[{ avgScores }]] = await db.query(t_sql);
 
-  let totalPages = 0;
   let rows = [];
 
   const sql = `SELECT p.*, pc.name cname  FROM \`products\` p JOIN \`product_categories\` pc ON p.category = pc.sid ${where}  `;
@@ -182,7 +181,6 @@ async function getProductData(req) {
 
   return {
     avgScores,
-    totalPages,
     rows,
     related_p,
     comment,
@@ -243,6 +241,15 @@ async function getPhotographers(req) {
   return { rows };
 }
 
+// 取得所有會員資料(make rooms list)，除了sid=2(root)
+async function getMemberData(req) {
+  const sql = `SELECT * FROM \`members_data\` WHERE sid != 2`;
+  let rows = [];
+  [rows] = await db.query(sql);
+
+  return { rows };
+}
+
 // R
 // 取得分類傳至react呈現
 router.get('/c-json', async (req, res) => {
@@ -297,6 +304,14 @@ router.get('/lovedList', async (req, res) => {
   res.json(data);
 });
 
+// 取得所有會員資料(make rooms list)，除了sid=2(root)
+router.get('/member_for_rooms', async (req, res) => {
+  const data = await getMemberData(req);
+
+  res.json(data);
+});
+
+// C
 // 新增評價
 router.post('/addReply-api', async (req, res) => {
   // const reply = {
