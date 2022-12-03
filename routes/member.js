@@ -423,6 +423,18 @@ async function getMemberData(req, res) {
   return { rows };
 }
 
+//抓會員細節資料
+async function getMemberDetailData(req, res) {
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+
+  if (sid) {
+    where = `WHERE md.sid = ${sid}`;
+  }
+
+  let rows = [];
+  const sql = `SELECT * FROM \`members_data\` md JOIN \`orders\` ON  ${where}`;
+}
+
 //抓城市資料
 async function getCityData() {
   //全部的資料
@@ -470,7 +482,24 @@ async function getPhotoData(req, res) {
 
   let rows = [];
 
-  const sql = `SELECT * FROM \`orders\` od LEFT JOIN \`photo_order_details\` opd ON od.orders_sid = opd.photo_order_sid ${where}`;
+  const sql = `SELECT * FROM \`orders\` od JOIN \`photo_order_details\` opd ON od.orders_num = opd.orders_num ${where}`;
+
+  [rows] = await db.query(sql);
+
+  return { rows };
+}
+
+//抓商品訂單資料
+async function getProductData(req, res) {
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+
+  if (sid) {
+    where = `WHERE od.member_sid = ${sid}`;
+  }
+
+  let rows = [];
+
+  const sql = `SELECT * FROM \`orders\` od JOIN \`order_details\` oud ON od.orders_num = oud.orders_num ${where}`;
 
   [rows] = await db.query(sql);
 
@@ -515,10 +544,13 @@ router.get('/orderphotodata/:sid', async (req, res) => {
 });
 
 //抓商品訂單資料
-router.get('/orderproductdata', async (req, res) => {
-  res.json(await getProdectData(req, res));
+router.get('/orderproductdata/:sid', async (req, res) => {
+  res.json(await getProductData(req, res));
 });
 
-//修改會員資料
+//會員細節資料
+router.get('/memberdetail/:sid', async (req, res) => {
+  res.json(await getMemberDetailData(req, res));
+});
 
 module.exports = router;

@@ -1,0 +1,14 @@
+/node_modules
+
+/build
+
+.DS_Store
+.env
+
+.vscode
+
+package-lock.json
+
+client_secret.json
+
+yarn.lock
