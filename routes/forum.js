@@ -32,7 +32,7 @@ async function getArticleDetail(req, res) {
   details = await db.query(sql);
   // 留言內容
   // if (rows[0]) {
-  const c_sql = `SELECT r.*, m.member_photo FROM \`reply\` r JOIN members_data m ON m.sid=r.m_sid WHERE r.a_sid=${sid}`;
+  const c_sql = `SELECT r.*, m.member_photo,m.name FROM \`reply\` r JOIN members_data m ON m.sid=r.m_sid WHERE r.a_sid=${sid}`;
 
   [forum_comment] = await db.query(c_sql);
   // }
