@@ -426,13 +426,17 @@ async function getMemberData(req, res) {
 //抓會員細節資料
 async function getMemberDetailData(req, res) {
   let sid = req.params.sid ? req.params.sid.trim() : '';
+  // console.log(sid);
 
   if (sid) {
-    where = `WHERE md.sid = ${sid}`;
+    where = `WHERE od.member_sid = ${sid}`;
   }
 
-  let rows = [];
-  const sql = `SELECT * FROM \`members_data\` md JOIN \`orders\` ON  ${where}`;
+  const sql = `SELECT COUNT(1) total, SUM(final_price) price FROM \`orders\` od ${where}`;
+
+  [[{ total, price }]] = await db.query(sql);
+
+  return { total, price };
 }
 
 //抓城市資料
@@ -472,35 +476,40 @@ async function getLovedList(req) {
   return { rows };
 }
 
-//抓攝影訂單資料
-async function getPhotoData(req, res) {
+//抓訂單總資料
+async function getOrderData(req, res) {
   let sid = req.params.sid ? req.params.sid.trim() : '';
 
-  if (sid) {
-    where = `WHERE od.member_sid = ${sid}`;
-  }
+  let where = `WHERE od.member_sid = ${sid}`;
 
   let rows = [];
 
-  const sql = `SELECT * FROM \`orders\` od JOIN \`photo_order_details\` opd ON od.orders_num = opd.orders_num ${where}`;
+  const sql = `SELECT * FROM \`orders\` od ${where}`;
 
   [rows] = await db.query(sql);
 
   return { rows };
 }
 
-//抓商品訂單資料
-async function getProductData(req, res) {
-  let sid = req.params.sid ? req.params.sid.trim() : '';
-
-  if (sid) {
-    where = `WHERE od.member_sid = ${sid}`;
-  }
+//抓商品細節資料
+async function getProductDetailData(req, res) {
+  let sid = req.params.sid ? req.params.sid : '';
 
   let rows = [];
 
-  const sql = `SELECT * FROM \`orders\` od JOIN \`order_details\` oud ON od.orders_num = oud.orders_num ${where}`;
+  const sql = `SELECT * FROM \`order_details\` odd  WHERE odd.orders_num = \'${sid}\'`;
+  [rows] = await db.query(sql);
 
+  return { rows };
+}
+
+//抓攝影細節資料
+async function getPhotoDetailData(req, res) {
+  let sid = req.params.sid ? req.params.sid : '';
+
+  let rows = [];
+
+  const sql = `SELECT * FROM \`photo_order_details\` pod WHERE pod.orders_num = \'${sid}\'`;
   [rows] = await db.query(sql);
 
   return { rows };
@@ -538,14 +547,19 @@ router.get('/clinicdata/:sid', async (req, res) => {
   res.json(await getClinicData(req, res));
 });
 
-//抓攝影訂單資料
-router.get('/orderphotodata/:sid', async (req, res) => {
-  res.json(await getPhotoData(req, res));
+//抓攝影訂單細節資料
+router.get('/orderphotodetail/:sid', async (req, res) => {
+  res.json(await getPhotoDetailData(req, res));
 });
 
-//抓商品訂單資料
-router.get('/orderproductdata/:sid', async (req, res) => {
-  res.json(await getProductData(req, res));
+//抓訂單總資料
+router.get('/orderdata/:sid', async (req, res) => {
+  res.json(await getOrderData(req, res));
+});
+
+//抓商品訂單細節資料
+router.get('/orderproductdetail/:sid', async (req, res) => {
+  res.json(await getProductDetailData(req, res));
 });
 
 //會員細節資料
