@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const db = require(__dirname + '/../modules/db_connect');
-const SqlString = require('sqlstring');
 
 const getConversations = async (req, res) => {
   const sql = `SELECT c.*, m.name senderName, m.member_photo senderImg FROM \`conversation\` c JOIN members_data m ON m.sid=c.senderId WHERE receiverId=${req.params.sid}`;
