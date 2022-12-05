@@ -8,6 +8,7 @@ const fs = require('fs').promises;
 const cors = require('cors');
 const multer = require('multer');
 const dotenv = require('dotenv');
+const dayjs = require('dayjs');
 
 dotenv.config();
 
@@ -47,6 +48,96 @@ app.use('/member', memberRouter);
 //碩恩新增購物車路由 merge後備份11/29
 const cartRouter = require(__dirname + '/routes/cart');
 app.use('/cart', cartRouter);
+
+// socket.io
+// 將 express 放進 http 中開啟 Server 的 6003 port ， 正確開啟後console印出訊息
+const socketPort = 3001 || 30002;
+const server = require('http')
+  .Server(app)
+  .listen(socketPort, () => {
+    console.log(`open socket server! port:${socketPort}`);
+  });
+
+// 將啟動的 Server 送給 socket.io 處理
+const io = require('socket.io')(server, {
+  // cors 讓 localhost 可跨 port 連接
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+});
+
+const CHAT_BOT = 'ChatBot';
+let chatRoom = '';
+let allUsers = [];
+const leaveRoom = require('./utils/leave-room');
+
+// 監聽 Server 連線後的所有事件，並捕捉事件 socket 執行
+io.on('connection', (socket) => {
+  console.log(`User Connected: ${socket.id}`);
+
+  // Add a user to a room
+  socket.on('join_room', (data) => {
+    const { username, room } = data; // Data sent from client when join_room event emitted
+    socket.join(room); // Join the user to a socket room
+
+    let __createdtime__ = Date.now();
+    // send msg to all users in the room when new user that just joined
+    socket.to(room).emit('receive_message', {
+      message: `${username} has joined the room!`,
+      username: CHAT_BOT,
+      __createdtime__,
+    });
+
+    // welcome msg
+    socket.emit('receive_message', {
+      message: `Welcome ${username}`,
+      username: CHAT_BOT,
+      __createdtime__,
+    });
+
+    chatRoom = room;
+    allUsers.push({ id: socket.id, username, room });
+    chatRoomUsers = allUsers.filter((user) => user.room === room);
+    socket.to(room).emit('chatroom_users', chatRoomUsers);
+    socket.emit('chatroom_users', chatRoomUsers);
+  });
+
+  socket.on('send_message', (data) => {
+    const { message, username, room, __createdtime__ } = data;
+    io.in(room).emit('receive_message', data);
+    // TODO save msg into MySQL ?
+  });
+
+  // leave room
+  socket.on('leave_room', (data) => {
+    const { username, room } = data;
+    socket.leave(room);
+    const __createdtime__ = Date.now();
+    // Remove user from memory
+    allUsers = leaveRoom(socket.id, allUsers);
+    socket.to(room).emit('chatroom_users', allUsers);
+    socket.to(room).emit('receive_message', {
+      username: CHAT_BOT,
+      message: `${username} has left the chat`,
+      __createdtime__,
+    });
+    console.log(`${username} has left the chat`);
+  });
+
+  // disconnect
+  socket.on('disconnect', () => {
+    console.log('User disconnected from the chat');
+    const user = allUsers.find((user) => user.id == socket.id);
+    if (user?.username) {
+      allUsers = leaveRoom(socket.id, allUsers);
+      socket.to(chatRoom).emit('chatroom_users', allUsers);
+      socket.to(chatRoom).emit('receive_message', {
+        message: `${user.username} has disconnected from the chat.`,
+      });
+    }
+  });
+});
 
 app.use(express.static('public'));
 

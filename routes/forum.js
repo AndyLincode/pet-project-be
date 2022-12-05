@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const SqlString = require('sqlstring');
 const db = require(__dirname + '/../modules/db_connect');
 const upload = require(__dirname + '/../modules/upload_img');
 
@@ -20,13 +21,13 @@ async function getArticles(req, res) {
 
 async function getArticleDetail(req, res) {
   let where = ' WHERE 1';
-  // 攝影師表單
+
   let sid = req.query.sid ? req.query.sid.trim() : '';
   if (sid) {
     where = `WHERE a.article_sid =${sid}`;
   }
   // 抓文章詳細
-  const sql = `SELECT a.*,m.name user FROM \`article\` a JOIN members_data m ON a.m_sid=m.sid ${where} `;
+  const sql = `SELECT a.*,m.name FROM \`article\` a JOIN members_data m ON a.m_sid=m.sid ${where} `;
 
   let details = [];
   details = await db.query(sql);
@@ -38,6 +39,22 @@ async function getArticleDetail(req, res) {
   // }
 
   return { details, forum_comment };
+}
+// 文章收藏資料表導入
+async function getCollection(req, res) {
+  const m_sid = req.query.m_sid;
+
+  // 判斷登入
+  if (!m_sid) {
+    return res.json({ message: '請先登入', code: '401' });
+  }
+
+  const sql = `SELECT a.* FROM \`article_collection\` a JOIN members_data m ON a.m_sid=m.sid WHERE a.m_sid=${m_sid} `;
+
+  let rows = [];
+  [rows] = await db.query(sql);
+
+  return { rows };
 }
 
 router.get('/articles', async (req, res) => {
@@ -92,11 +109,78 @@ router.post('/forum_post', upload.none(), async (req, res) => {
   console.log(output);
   res.json(output);
 });
-router.get('/allReply', async (req, res) => {
+
+router.post('/sendReply', upload.none(), async (req, res) => {
+  const output = {
+    success: false,
+  };
   console.log(req.query.message, req.query.sid);
-  const sql = 'UPDATE `article` SET `a_reply`=? WHERE article_sid=? ';
-  const [rows] = await db.query(sql, [req.query.message, req.query.sid]);
-  res.json(rows);
+  const sql =
+    'INSERT INTO `reply`(`a_sid`,`m_sid`,`r_content`,`created_at`) VALUES(?,?,?,NOW())';
+  const [result] = await db.query(sql, [
+    req.body.a_sid,
+    req.body.m_sid,
+    req.body.r_content,
+  ]);
+
+  if (result.affectedRows) output.success = true;
+  res.json(output);
 });
 
+// 收藏
 module.exports = router;
+
+// 資料表導入(文章收藏)
+router.get('/collection', async (req, res) => {
+  const data = await getCollection(req);
+
+  res.json(data);
+});
+
+// 新增收藏
+router.get('/addCollection', async (req, res) => {
+  const a_sid = req.query.a_sid;
+  const m_sid = req.query.m_sid;
+  // 判斷登入
+  if (!m_sid) res.json({ message: '請先登入', code: '401' });
+
+  const insertSql =
+    'INSERT INTO `article_collection`(`a_sid`, `m_sid`) VALUES (?,?)';
+
+  try {
+    const [result] = await db.query(insertSql, [a_sid, m_sid]);
+
+    res.json(result);
+    if (result.insertSql) {
+      return res.json({ message: 'success', code: '200' });
+    } else {
+      return res.json({ message: 'fail', code: '403' });
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
+});
+
+// 移除收藏
+router.get('/deleteCollection', async (req, res) => {
+  const a_sid = req.query.a_sid;
+  const m_sid = req.query.m_sid;
+  // 判斷登入
+  if (!m_sid) res.json({ message: '請先登入', code: '401' });
+
+  const delSql =
+    'DELETE FROM `article_collection` WHERE `a_sid`=? AND`m_sid`=?';
+
+  try {
+    const [result] = await db.query(delSql, [a_sid, m_sid]);
+
+    res.json(result);
+    if (result.insertSql) {
+      return res.json({ message: 'success', code: '200' });
+    } else {
+      return res.json({ message: 'fail', code: '403' });
+    }
+  } catch (error) {
+    console.log('error.message', error.message);
+  }
+});
