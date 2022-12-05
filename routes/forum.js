@@ -151,13 +151,13 @@ router.get('/addCollection', async (req, res) => {
     const [result] = await db.query(insertSql, [a_sid, m_sid]);
 
     res.json(result);
-    if (result.insertSql) {
-      return res.json({ message: 'success', code: '200' });
-    } else {
-      return res.json({ message: 'fail', code: '403' });
-    }
+    // if (result.insertSql) {
+    //   return res.json({ message: 'success', code: '200' });
+    // } else {
+    //   return res.json({ message: 'fail', code: '403' });
+    // }
   } catch (error) {
-    console.log(error.message);
+    console.log('error.message', error.message);
   }
 });
 
@@ -175,11 +175,11 @@ router.get('/deleteCollection', async (req, res) => {
     const [result] = await db.query(delSql, [a_sid, m_sid]);
 
     res.json(result);
-    if (result.insertSql) {
-      return res.json({ message: 'success', code: '200' });
-    } else {
-      return res.json({ message: 'fail', code: '403' });
-    }
+    // if (result.delSql) {
+    //   return res.json({ message: 'success', code: '200' });
+    // } else {
+    //   return res.json({ message: 'fail', code: '403' });
+    // }
   } catch (error) {
     console.log('error.message', error.message);
   }
