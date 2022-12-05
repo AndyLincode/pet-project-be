@@ -4,7 +4,7 @@ const db = require(__dirname + '/../modules/db_connect');
 const jwt = require('jsonwebtoken');
 const moment = require('moment-timezone'); // 日期格式(選擇性)
 const upload = require(__dirname + '/../modules/upload_img');
-const opay = require('opay_payment_nodejs');
+// const opay = require('opay_payment_nodejs');
 const ShortUniqueId = require('short-unique-id');
 const dayjs = require('dayjs');
 
