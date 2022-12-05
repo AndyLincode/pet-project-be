@@ -10,6 +10,8 @@ const { OAuth2Client, auth } = require('google-auth-library');
 const keys = require(__dirname + '/../client_secret.json');
 const dayjs = require('dayjs');
 const ShortUniqueId = require('short-unique-id');
+const axios = require('axios');
+const Qs = require('qs');
 
 router.post('/login-api', async (req, res) => {
   const output = {
@@ -42,6 +44,63 @@ router.post('/login-api', async (req, res) => {
   res.json(output);
 });
 
+//line登入
+
+router.get('/linelogin', async (req, res) => {
+  let URL = 'https://access.line.me/oauth2/v2.1/authorize?';
+
+  //必填
+  URL += 'response_type=code';
+  URL += `&client_id=${process.env.LINE_CHANELL_ID}`;
+  URL += `&redirect_uri=${process.env.LINE_REDIRECT_URL}`;
+  URL += '&state=123456789';
+  URL += '&scope=openid%20profile%20email';
+  //選填
+  URL += '&prompt=consent'
+  URL += '&max_age=241000'
+  res.json(URL);
+});
+
+router.get('/linecallback', async (req, res) => {
+  const qs = req.query;
+
+  let option1 = Qs.stringify({
+    grant_type: 'authorization_code',
+    code: qs.code,
+    redirect_uri: process.env.LINE_REDIRECT_URL,
+    client_id: process.env.LINE_CHANELL_ID,
+    client_secret: process.env.LINE_CHANELL_SECRET,
+  });
+
+  let id_token = '';
+
+  const res1 = await axios.post(
+    'https://api.line.me/oauth2/v2.1/token',
+    option1,
+    {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }
+  );
+  console.log(res1);
+
+  id_token = res1.data.id_token;
+
+  let option2 = Qs.stringify({
+    client_id: process.env.LINE_CHANELL_ID,
+    id_token: id_token,
+  });
+  console.log(option2);
+
+  const res2 = await axios.post(
+    'https://api.line.me/oauth2/v2.1/verify',
+    option2,
+    {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }
+  );
+  console.log(res2);
+});
+
 //google登入
 //使用OAuth2Client
 const oAuth2c = new OAuth2Client(
@@ -50,7 +109,7 @@ const oAuth2c = new OAuth2Client(
   keys.web.redirect_uris[1]
 );
 // //建立連結URL
-router.get('/login', async (req, res, next) => {
+router.get('/googlelogin', async (req, res, next) => {
   const authorizeUrl = oAuth2c.generateAuthUrl({
     access_type: 'offline',
     // 欲取得 email, 要兩個 scopes
@@ -64,7 +123,7 @@ router.get('/login', async (req, res, next) => {
 });
 
 // //利用tokens取得資料
-router.get('/callback', async (req, res, next) => {
+router.get('/googlecallback', async (req, res, next) => {
   const qs = req.query;
 
   let mail = '';
