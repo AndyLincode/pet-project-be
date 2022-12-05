@@ -62,7 +62,7 @@ router.post('/newMessage', async (req, res) => {
 
 // get messages
 router.get('/messages/:sid', async (req, res) => {
-  const sql = `SELECT m.*,member.name sender FROM \`messages\` m JOIN members_data member ON member.sid=m.sender_sid WHERE m.conversation_sid=${req.params.sid} `;
+  const sql = `SELECT m.*,member.name sender ,member.member_photo senderImg FROM \`messages\` m JOIN members_data member ON member.sid=m.sender_sid WHERE m.conversation_sid=${req.params.sid} `;
   try {
     const [result] = await db.query(sql);
 
