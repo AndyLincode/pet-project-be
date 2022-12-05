@@ -4,7 +4,7 @@ const db = require(__dirname + '/../modules/db_connect');
 const jwt = require('jsonwebtoken');
 const moment = require('moment-timezone'); // 日期格式(選擇性)
 const upload = require(__dirname + '/../modules/upload_img');
-// const opay = require('opay_payment_nodejs');
+const opay = require('opay_payment_nodejs');
 const ShortUniqueId = require('short-unique-id');
 const dayjs = require('dayjs');
 
@@ -127,7 +127,7 @@ router.get('/paymentaction', (req, res) => {
     TradeDesc: '企鵝玩偶 一隻',
     ItemName: '企鵝玩偶 300元 X 1#企鵝玩偶 200元 X 1',
     ReturnURL: 'http://localhost:3000/', // 付款結果通知URL  https://developers.opay.tw/AioMock/MerchantReturnUrl
-    OrderResultURL: '', // 在使用者在付款結束後，將使用者的瀏覽器畫面導向該URL所指定的URL
+    OrderResultURL: 'http://localhost:3000/clinic/payresult', // 在使用者在付款結束後，將使用者的瀏覽器畫面導向該URL所指定的URL
     EncryptType: 1,
     // ItemURL: 'http://item.test.tw',aw
     Remark: '該服務繳費成立時，恕不接受退款。',
@@ -186,6 +186,31 @@ router.post('/payment', (req, res) => {
     res.write('1|OK');
     res.end();
   }
+});
+
+router.post('/payresult', (req, res) => {
+  var merchantID = req.body.MerchantID; //會員編號
+  var merchantTradeNo = req.body.MerchantTradeNo; //交易編號
+  var storeID = req.body.StoreID; //商店編號
+  var rtnMsg = req.body.RtnMsg; //交易訊息
+  var paymentDate = req.body.PaymentDate; //付款時間
+  var paymentType = req.body.PaymentType; //付款方式
+  var tradeAmt = req.body.TradeAmt; //交易金額
+
+  let result = {
+    member: {
+      merchantID: merchantID,
+      merchantTradeNo: merchantTradeNo,
+      storeID: storeID,
+      rtnMsg: rtnMsg,
+      paymentDate: paymentDate,
+      paymentType: paymentType,
+      tradeAmt: tradeAmt,
+    },
+  };
+  console.log('result: ' + JSON.stringify(result));
+  res.redirect('http://localhost:3000/clinic/payresult');
+  // res.json(result);
 });
 
 //新增資料
