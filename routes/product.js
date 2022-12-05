@@ -202,7 +202,7 @@ async function getHistory(req) {
 }
 
 // 資料表導入(商品收藏)
-async function getLovedList(req) {
+async function getLovedList(req, res) {
   const m_sid = +req.query.m_sid;
 
   // 判斷登入

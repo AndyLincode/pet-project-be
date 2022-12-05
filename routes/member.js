@@ -87,7 +87,8 @@ router.get('/callback', async (req, res, next) => {
     // console.log({ mail, name });
   }
   const output = {
-    success: false,
+    registersuccess:false,
+    loginsuccess: false,
     error: '',
     auth: {},
   };
@@ -95,31 +96,18 @@ router.get('/callback', async (req, res, next) => {
   const sql_mail = `SELECT email FROM members_data WHERE email = ?`;
   const [rows] = await db.query(sql_mail, mail);
   // console.log(rows);
-  if (rows.length === 1) {
-    const sql_select = 'SELECT * FROM members_data WHERE email = ?';
-    const [rows] = await db.query(sql_select, mail);
-    if (!rows.length) {
-      return res.json(output);
-    }
-    const row = rows[0];
 
-    output.success = row['email'] === mail ? true : false;
-
-    if (output.success) {
-      const { sid, name } = row;
-      const token = jwt.sign({ sid, name }, process.env.JWT_SECRET);
-      output.auth = {
-        sid,
-        name,
-        token,
-      };
-    }
-  } else {
+  if (rows.length < 1) {
     const sql_insert =
       'INSERT INTO `members_data`(`email`,`name`) VALUES (?,?)';
 
     const [result] = await db.query(sql_insert, [mail, name]);
 
+    if (result.affectedRows) output.registersuccess = true;
+
+    return res.json(output);
+
+  } else if (rows.length === 1) {
     const sql_select = 'SELECT * FROM members_data WHERE email = ?';
     const [rows] = await db.query(sql_select, mail);
     if (!rows.length) {
@@ -127,10 +115,9 @@ router.get('/callback', async (req, res, next) => {
     }
     const row = rows[0];
 
-    output.success =
-      row['email'] === mail && result.affectedRows ? true : false;
+    output.loginsuccess = row['email'] === mail ? true : false;
 
-    if (output.success) {
+    if (output.loginsuccess) {
       const { sid, name } = row;
       const token = jwt.sign({ sid, name }, process.env.JWT_SECRET);
       output.auth = {
@@ -139,12 +126,14 @@ router.get('/callback', async (req, res, next) => {
         token,
       };
     }
+
+    return res.json(output);
   }
-  res.json(output);
 });
 
 //會員新增資料
-router.post('/add', upload.single('member_photo'), async (req, res) => {
+router.post('/add', upload.none(), async (req, res) => {
+  const coupon = 'PetBen1214';
   const output = {
     success: false,
     code: 0,
@@ -153,26 +142,12 @@ router.post('/add', upload.single('member_photo'), async (req, res) => {
   };
 
   const sql =
-    'INSERT INTO `members_data`(`name`, `account`, `gender`, `password`,`member_photo`,`city`,`area`,`address`,`birthday`, `email`, `mobile`, `create_at`) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())';
-
-  if (req.body.member_photo === 'noname.png') {
-    avatar = req.body.member_photo;
-  } else {
-    avatar = req.file.filename;
-  }
+    'INSERT INTO `members_data`( `email`, `password`,`coupon_code`, `create_at`) VALUES (?,?,?,NOW())';
 
   const [result] = await db.query(sql, [
-    req.body.name,
-    req.body.account,
-    req.body.gender || null,
+    req.body.mail,
     req.body.password,
-    avatar,
-    req.body.city || null,
-    req.body.area || null,
-    req.body.address || null,
-    req.body.birthday || null,
-    req.body.mail || null,
-    req.body.mobile || null,
+    coupon,
   ]);
 
   //affectedRows有影響的列數
