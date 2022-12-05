@@ -55,6 +55,9 @@ router.get('/linelogin', async (req, res) => {
   URL += `&redirect_uri=${process.env.LINE_REDIRECT_URL}`;
   URL += '&state=123456789';
   URL += '&scope=openid%20profile%20email';
+  //選填
+  URL += '&prompt=consent'
+  URL += '&max_age=241000'
   res.json(URL);
 });
 
