@@ -12,6 +12,9 @@ const dayjs = require('dayjs');
 const ShortUniqueId = require('short-unique-id');
 const axios = require('axios');
 const Qs = require('qs');
+const { v4: uuid4 } = require('uuid');
+const fs = require('fs');
+const https = require('https');
 
 router.post('/login-api', async (req, res) => {
   const output = {
@@ -56,8 +59,8 @@ router.get('/linelogin', async (req, res) => {
   URL += '&state=123456789';
   URL += '&scope=openid%20profile%20email';
   //選填
-  URL += '&prompt=consent'
-  URL += '&max_age=241000'
+  URL += '&prompt=consent';
+  URL += '&max_age=241000';
   res.json(URL);
 });
 
@@ -81,7 +84,7 @@ router.get('/linecallback', async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     }
   );
-  console.log(res1);
+  //console.log(res1);
 
   id_token = res1.data.id_token;
 
@@ -89,7 +92,7 @@ router.get('/linecallback', async (req, res) => {
     client_id: process.env.LINE_CHANELL_ID,
     id_token: id_token,
   });
-  console.log(option2);
+  //console.log(option2);
 
   const res2 = await axios.post(
     'https://api.line.me/oauth2/v2.1/verify',
@@ -98,7 +101,70 @@ router.get('/linecallback', async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     }
   );
-  console.log(res2);
+  
+  const output = {
+    registersuccess: false,
+    loginsuccess: false,
+    error: '',
+    auth: {},
+  };
+  //console.log(res2);
+  let name = res2.data.name;
+  let mail = res2.data.email;
+  let photo = res2.data.picture;
+
+  //拿到照片
+  function saveImageToDisk(url, path) {
+    let fullurl = url;
+
+    let localpath = fs.createWriteStream(path);
+
+    let request = https.get(fullurl, (res) => {
+      res.pipe(localpath);
+    });
+  }
+
+  let photoname = uuid4();
+  saveImageToDisk(photo, './public/uploads/imgs/' + photoname + '.jpg');
+  const sql_mail = `SELECT email FROM members_data WHERE email = ?`;
+  const [rows] = await db.query(sql_mail, mail);
+  // console.log(rows);
+
+  if (rows.length < 1) {
+    const sql_insert =
+      'INSERT INTO `members_data`(`email`,`name`,`member_photo`) VALUES (?,?,?)';
+
+    const [result] = await db.query(sql_insert, [
+      mail,
+      name,
+      photoname + '.jpg',
+    ]);
+
+    if (result.affectedRows) output.registersuccess = true;
+
+    return res.json(output);
+  } else if (rows.length === 1) {
+    const sql_select = 'SELECT * FROM members_data WHERE email = ?';
+    const [rows] = await db.query(sql_select, mail);
+    if (!rows.length) {
+      return res.json(output);
+    }
+    const row = rows[0];
+
+    output.loginsuccess = row['email'] === mail ? true : false;
+
+    if (output.loginsuccess) {
+      const { sid, name, member_photo } = row;
+      const token = jwt.sign({ sid, name }, process.env.JWT_SECRET);
+      output.auth = {
+        sid,
+        member_photo,
+        name,
+        token,
+      };
+    }
+    return res.json(output);
+  }
 });
 
 //google登入
@@ -128,6 +194,7 @@ router.get('/googlecallback', async (req, res, next) => {
 
   let mail = '';
   let name = '';
+  let photo = '';
   if (qs.code) {
     const r = await oAuth2c.getToken(qs.code);
     oAuth2c.setCredentials(r.tokens);
@@ -143,14 +210,29 @@ router.get('/googlecallback', async (req, res, next) => {
 
     mail = myData.emailAddresses[0].value;
     name = myData.names[0].givenName;
-    // console.log({ mail, name });
+    photo = myData.photos[0].url;
+    //console.log({ mail, name });
   }
   const output = {
-    registersuccess:false,
+    registersuccess: false,
     loginsuccess: false,
     error: '',
     auth: {},
   };
+
+  //拿到照片
+  function saveImageToDisk(url, path) {
+    let fullurl = url;
+
+    let localpath = fs.createWriteStream(path);
+
+    let request = https.get(fullurl, (res) => {
+      res.pipe(localpath);
+    });
+  }
+
+  let photoname = uuid4();
+  saveImageToDisk(photo, './public/uploads/imgs/' + photoname + '.jpg');
 
   const sql_mail = `SELECT email FROM members_data WHERE email = ?`;
   const [rows] = await db.query(sql_mail, mail);
@@ -158,14 +240,17 @@ router.get('/googlecallback', async (req, res, next) => {
 
   if (rows.length < 1) {
     const sql_insert =
-      'INSERT INTO `members_data`(`email`,`name`) VALUES (?,?)';
+      'INSERT INTO `members_data`(`email`,`name`,`member_photo`) VALUES (?,?,?)';
 
-    const [result] = await db.query(sql_insert, [mail, name]);
+    const [result] = await db.query(sql_insert, [
+      mail,
+      name,
+      photoname + '.jpg',
+    ]);
 
     if (result.affectedRows) output.registersuccess = true;
 
     return res.json(output);
-
   } else if (rows.length === 1) {
     const sql_select = 'SELECT * FROM members_data WHERE email = ?';
     const [rows] = await db.query(sql_select, mail);
@@ -177,10 +262,11 @@ router.get('/googlecallback', async (req, res, next) => {
     output.loginsuccess = row['email'] === mail ? true : false;
 
     if (output.loginsuccess) {
-      const { sid, name } = row;
+      const { sid, name, member_photo } = row;
       const token = jwt.sign({ sid, name }, process.env.JWT_SECRET);
       output.auth = {
         sid,
+        member_photo,
         name,
         token,
       };
