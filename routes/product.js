@@ -202,7 +202,7 @@ async function getHistory(req) {
 }
 
 // 資料表導入(商品收藏)
-async function getLovedList(req) {
+async function getLovedList(req, res) {
   const m_sid = +req.query.m_sid;
 
   // 判斷登入
@@ -241,12 +241,17 @@ async function getPhotographers(req) {
   return { rows };
 }
 
-// 取得所有會員資料(make rooms list)，除了sid=2(root)
-async function getMemberData(req) {
-  const sql = `SELECT * FROM \`members_data\` WHERE sid != 2`;
+// 資料表導入(首頁推薦商品)
+async function getRecommendedProducts(req, res) {
+  const mode = req.params.mode;
+  let where = 'WHERE 1';
+  if (mode) {
+    where = `WHERE category=${mode}`;
+  }
+
+  const sql = `SELECT * FROM \`products\` ${where} LIMIT 8`;
   let rows = [];
   [rows] = await db.query(sql);
-
   return { rows };
 }
 
@@ -304,9 +309,9 @@ router.get('/lovedList', async (req, res) => {
   res.json(data);
 });
 
-// 取得所有會員資料(make rooms list)，除了sid=2(root)
-router.get('/member_for_rooms', async (req, res) => {
-  const data = await getMemberData(req);
+// 取得推薦商品
+router.get('/recommended/:mode', async (req, res) => {
+  const data = await getRecommendedProducts(req);
 
   res.json(data);
 });
@@ -314,14 +319,6 @@ router.get('/member_for_rooms', async (req, res) => {
 // C
 // 新增評價
 router.post('/addReply-api', async (req, res) => {
-  // const reply = {
-  //   scores: 5,
-  //   comment: '測試新增回應',
-  //   p_sid: 1,
-  //   m_sid: 1,
-  //   o_sid: 1,
-  //   created_at: new Date(),
-  // };
   const getReply = req.body;
   // const now = new Date;
   const m = moment();
@@ -381,10 +378,6 @@ router.post('/addReply-api', async (req, res) => {
 
 // 新增收藏
 router.get('/addLoved-api', async (req, res) => {
-  // const loved = {
-  //   p_sid: 2,
-  //   m_sid: 1,
-  // };
   const p_sid = req.query.p_sid;
   const m_sid = req.query.m_sid;
 
@@ -410,10 +403,6 @@ router.get('/addLoved-api', async (req, res) => {
 
 // 移除收藏
 router.get('/delLoved-api', async (req, res) => {
-  // const loved = {
-  //   p_sid: 2,
-  //   m_sid: 1,
-  // };
   const p_sid = req.query.p_sid;
   const m_sid = req.query.m_sid;
 

@@ -10,6 +10,8 @@ const { OAuth2Client, auth } = require('google-auth-library');
 const keys = require(__dirname + '/../client_secret.json');
 const dayjs = require('dayjs');
 const ShortUniqueId = require('short-unique-id');
+const axios = require('axios');
+const Qs = require('qs');
 
 router.post('/login-api', async (req, res) => {
   const output = {
@@ -42,6 +44,63 @@ router.post('/login-api', async (req, res) => {
   res.json(output);
 });
 
+//line登入
+
+router.get('/linelogin', async (req, res) => {
+  let URL = 'https://access.line.me/oauth2/v2.1/authorize?';
+
+  //必填
+  URL += 'response_type=code';
+  URL += `&client_id=${process.env.LINE_CHANELL_ID}`;
+  URL += `&redirect_uri=${process.env.LINE_REDIRECT_URL}`;
+  URL += '&state=123456789';
+  URL += '&scope=openid%20profile%20email';
+  //選填
+  URL += '&prompt=consent'
+  URL += '&max_age=241000'
+  res.json(URL);
+});
+
+router.get('/linecallback', async (req, res) => {
+  const qs = req.query;
+
+  let option1 = Qs.stringify({
+    grant_type: 'authorization_code',
+    code: qs.code,
+    redirect_uri: process.env.LINE_REDIRECT_URL,
+    client_id: process.env.LINE_CHANELL_ID,
+    client_secret: process.env.LINE_CHANELL_SECRET,
+  });
+
+  let id_token = '';
+
+  const res1 = await axios.post(
+    'https://api.line.me/oauth2/v2.1/token',
+    option1,
+    {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }
+  );
+  console.log(res1);
+
+  id_token = res1.data.id_token;
+
+  let option2 = Qs.stringify({
+    client_id: process.env.LINE_CHANELL_ID,
+    id_token: id_token,
+  });
+  console.log(option2);
+
+  const res2 = await axios.post(
+    'https://api.line.me/oauth2/v2.1/verify',
+    option2,
+    {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }
+  );
+  console.log(res2);
+});
+
 //google登入
 //使用OAuth2Client
 const oAuth2c = new OAuth2Client(
@@ -50,7 +109,7 @@ const oAuth2c = new OAuth2Client(
   keys.web.redirect_uris[1]
 );
 // //建立連結URL
-router.get('/login', async (req, res, next) => {
+router.get('/googlelogin', async (req, res, next) => {
   const authorizeUrl = oAuth2c.generateAuthUrl({
     access_type: 'offline',
     // 欲取得 email, 要兩個 scopes
@@ -64,7 +123,7 @@ router.get('/login', async (req, res, next) => {
 });
 
 // //利用tokens取得資料
-router.get('/callback', async (req, res, next) => {
+router.get('/googlecallback', async (req, res, next) => {
   const qs = req.query;
 
   let mail = '';
@@ -87,7 +146,8 @@ router.get('/callback', async (req, res, next) => {
     // console.log({ mail, name });
   }
   const output = {
-    success: false,
+    registersuccess:false,
+    loginsuccess: false,
     error: '',
     auth: {},
   };
@@ -95,31 +155,18 @@ router.get('/callback', async (req, res, next) => {
   const sql_mail = `SELECT email FROM members_data WHERE email = ?`;
   const [rows] = await db.query(sql_mail, mail);
   // console.log(rows);
-  if (rows.length === 1) {
-    const sql_select = 'SELECT * FROM members_data WHERE email = ?';
-    const [rows] = await db.query(sql_select, mail);
-    if (!rows.length) {
-      return res.json(output);
-    }
-    const row = rows[0];
 
-    output.success = row['email'] === mail ? true : false;
-
-    if (output.success) {
-      const { sid, name } = row;
-      const token = jwt.sign({ sid, name }, process.env.JWT_SECRET);
-      output.auth = {
-        sid,
-        name,
-        token,
-      };
-    }
-  } else {
+  if (rows.length < 1) {
     const sql_insert =
       'INSERT INTO `members_data`(`email`,`name`) VALUES (?,?)';
 
     const [result] = await db.query(sql_insert, [mail, name]);
 
+    if (result.affectedRows) output.registersuccess = true;
+
+    return res.json(output);
+
+  } else if (rows.length === 1) {
     const sql_select = 'SELECT * FROM members_data WHERE email = ?';
     const [rows] = await db.query(sql_select, mail);
     if (!rows.length) {
@@ -127,10 +174,9 @@ router.get('/callback', async (req, res, next) => {
     }
     const row = rows[0];
 
-    output.success =
-      row['email'] === mail && result.affectedRows ? true : false;
+    output.loginsuccess = row['email'] === mail ? true : false;
 
-    if (output.success) {
+    if (output.loginsuccess) {
       const { sid, name } = row;
       const token = jwt.sign({ sid, name }, process.env.JWT_SECRET);
       output.auth = {
@@ -139,12 +185,14 @@ router.get('/callback', async (req, res, next) => {
         token,
       };
     }
+
+    return res.json(output);
   }
-  res.json(output);
 });
 
 //會員新增資料
-router.post('/add', upload.single('member_photo'), async (req, res) => {
+router.post('/add', upload.none(), async (req, res) => {
+  const coupon = 'PetBen1214';
   const output = {
     success: false,
     code: 0,
@@ -153,26 +201,12 @@ router.post('/add', upload.single('member_photo'), async (req, res) => {
   };
 
   const sql =
-    'INSERT INTO `members_data`(`name`, `account`, `gender`, `password`,`member_photo`,`city`,`area`,`address`,`birthday`, `email`, `mobile`, `create_at`) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())';
-
-  if (req.body.member_photo === 'noname.png') {
-    avatar = req.body.member_photo;
-  } else {
-    avatar = req.file.filename;
-  }
+    'INSERT INTO `members_data`( `email`, `password`,`coupon_code`, `create_at`) VALUES (?,?,?,NOW())';
 
   const [result] = await db.query(sql, [
-    req.body.name,
-    req.body.account,
-    req.body.gender || null,
+    req.body.mail,
     req.body.password,
-    avatar,
-    req.body.city || null,
-    req.body.area || null,
-    req.body.address || null,
-    req.body.birthday || null,
-    req.body.mail || null,
-    req.body.mobile || null,
+    coupon,
   ]);
 
   //affectedRows有影響的列數
@@ -423,6 +457,22 @@ async function getMemberData(req, res) {
   return { rows };
 }
 
+//抓會員細節資料
+async function getMemberDetailData(req, res) {
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+  // console.log(sid);
+
+  if (sid) {
+    where = `WHERE od.member_sid = ${sid}`;
+  }
+
+  const sql = `SELECT COUNT(1) total, SUM(final_price) price FROM \`orders\` od ${where}`;
+
+  [[{ total, price }]] = await db.query(sql);
+
+  return { total, price };
+}
+
 //抓城市資料
 async function getCityData() {
   //全部的資料
@@ -460,18 +510,40 @@ async function getLovedList(req) {
   return { rows };
 }
 
-//抓攝影訂單資料
-async function getPhotoData(req, res) {
+//抓訂單總資料
+async function getOrderData(req, res) {
   let sid = req.params.sid ? req.params.sid.trim() : '';
 
-  if (sid) {
-    where = `WHERE od.member_sid = ${sid}`;
-  }
+  let where = `WHERE od.member_sid = ${sid}`;
 
   let rows = [];
 
-  const sql = `SELECT * FROM \`orders\` od LEFT JOIN \`photo_order_details\` opd ON od.orders_sid = opd.photo_order_sid ${where}`;
+  const sql = `SELECT * FROM \`orders\` od ${where}`;
 
+  [rows] = await db.query(sql);
+
+  return { rows };
+}
+
+//抓商品細節資料
+async function getProductDetailData(req, res) {
+  let sid = req.params.sid ? req.params.sid : '';
+
+  let rows = [];
+
+  const sql = `SELECT * FROM \`order_details\` odd  WHERE odd.orders_num = \'${sid}\'`;
+  [rows] = await db.query(sql);
+
+  return { rows };
+}
+
+//抓攝影細節資料
+async function getPhotoDetailData(req, res) {
+  let sid = req.params.sid ? req.params.sid : '';
+
+  let rows = [];
+
+  const sql = `SELECT * FROM \`photo_order_details\` pod WHERE pod.orders_num = \'${sid}\'`;
   [rows] = await db.query(sql);
 
   return { rows };
@@ -509,16 +581,24 @@ router.get('/clinicdata/:sid', async (req, res) => {
   res.json(await getClinicData(req, res));
 });
 
-//抓攝影訂單資料
-router.get('/orderphotodata/:sid', async (req, res) => {
-  res.json(await getPhotoData(req, res));
+//抓攝影訂單細節資料
+router.get('/orderphotodetail/:sid', async (req, res) => {
+  res.json(await getPhotoDetailData(req, res));
 });
 
-//抓商品訂單資料
-router.get('/orderproductdata', async (req, res) => {
-  res.json(await getProdectData(req, res));
+//抓訂單總資料
+router.get('/orderdata/:sid', async (req, res) => {
+  res.json(await getOrderData(req, res));
 });
 
-//修改會員資料
+//抓商品訂單細節資料
+router.get('/orderproductdetail/:sid', async (req, res) => {
+  res.json(await getProductDetailData(req, res));
+});
+
+//會員細節資料
+router.get('/memberdetail/:sid', async (req, res) => {
+  res.json(await getMemberDetailData(req, res));
+});
 
 module.exports = router;
