@@ -124,8 +124,8 @@ router.get('/paymentaction', (req, res) => {
     MerchantTradeNo: uid(), //請帶20碼uid, ex: f0a0d7e9fae1bb72bc93
     MerchantTradeDate: daytime, //ex: 2017/02/13 15:45:30
     TotalAmount: '100',
-    TradeDesc: '企鵝玩偶 一隻',
-    ItemName: '企鵝玩偶 300元 X 1#企鵝玩偶 200元 X 1',
+    TradeDesc: '陪伴商品',
+    ItemName: '企鵝玩偶 300元 X 1 # 企鵝玩偶 200元 X 1',
     ReturnURL: 'http://localhost:3000/', // 付款結果通知URL  https://developers.opay.tw/AioMock/MerchantReturnUrl
     OrderResultURL: 'http://localhost:3000/clinic/payresult', // 在使用者在付款結束後，將使用者的瀏覽器畫面導向該URL所指定的URL
     EncryptType: 1,

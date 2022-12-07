@@ -24,8 +24,8 @@ router.post('/login-api', async (req, res) => {
     auth: {},
   };
   //判斷帳號在資料庫
-  const sql = 'SELECT * FROM 	members_data WHERE account=?';
-  const [rows] = await db.query(sql, [req.body.username]); // 這個質去看帳號
+  const sql = 'SELECT * FROM 	members_data WHERE email=?';
+  const [rows] = await db.query(sql, [req.body.mail]); // 這個質去看帳號
   if (!rows.length) {
     return res.json(output);
   }
@@ -101,7 +101,7 @@ router.get('/linecallback', async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     }
   );
-  
+
   const output = {
     registersuccess: false,
     loginsuccess: false,
@@ -580,8 +580,8 @@ async function getAreaData() {
   return { rows };
 }
 
-// 抓收藏列表
-async function getLovedList(req) {
+// 抓商品收藏列表
+async function getProductLovedList(req) {
   const m_sid = +req.query.m_sid;
 
   // 判斷登入
@@ -593,6 +593,24 @@ async function getLovedList(req) {
   const formatSql = SqlString.format(sql, [m_sid]);
   let rows = [];
   [rows] = await db.query(formatSql);
+  return { rows };
+}
+
+//抓文章收藏列表
+async function getArticleLovedList(req, res) {
+  const m_sid = +req.query.m_sid;
+
+  if (!m_sid) {
+    return res.json({ message: '請先登入', code: '401' });
+  }
+
+  const sql = `SELECT md.name, al.*,a.title,a.category,a.created_at,a.m_sid author FROM article_collection al JOIN article a ON al.a_sid = a.article_sid JOIN members_data md ON md.sid = a.m_sid WHERE al.m_sid =?`;
+
+  const formatSql = SqlString.format(sql, [m_sid]);
+  let rows = [];
+
+  [rows] = await db.query(formatSql);
+
   return { rows };
 }
 
@@ -635,6 +653,28 @@ async function getPhotoDetailData(req, res) {
   return { rows };
 }
 
+//多筆移除商品收藏
+router.post('/deleteproudctlist', async (req, res) => {
+  console.log(req.body);
+
+  const sql = 'DELETE FROM product_loved WHERE p_sid IN (?)';
+
+  const [result] = await db.query(sql, [req.body]);
+
+  res.json({ success: !!result.affectedRows, result });
+});
+
+//多筆移除文章收藏
+router.post('/deletearticlelist', async (req, res) => {
+  console.log(req.body);
+
+  const sql = 'DELETE FROM article_collection WHERE a_sid IN (?)';
+
+  const [result] = await db.query(sql, [req.body]);
+
+  res.json({ success: !!result.affectedRows, result });
+});
+
 //抓商品訂單資料
 //抓城市資料
 router.get('/citydata', async (req, res) => {
@@ -655,11 +695,13 @@ router.get('/petdata/:sid', async (req, res) => {
 });
 
 //抓文章收藏資料
-router.get('/articledata', async (req, res) => {});
+router.get('/articledata', async (req, res) => {
+  res.json(await getArticleLovedList(req, res));
+});
 
 //抓商品收藏資料
 router.get('/productdata', async (req, res) => {
-  res.json(await getLovedList(req));
+  res.json(await getProductLovedList(req));
 });
 
 //抓診所掛號資料
