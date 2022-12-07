@@ -12,3 +12,5 @@ package-lock.json
 client_secret.json
 
 yarn.lock
+
+*.jpg

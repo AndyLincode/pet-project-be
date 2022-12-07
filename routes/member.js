@@ -12,6 +12,9 @@ const dayjs = require('dayjs');
 const ShortUniqueId = require('short-unique-id');
 const axios = require('axios');
 const Qs = require('qs');
+const { v4: uuid4 } = require('uuid');
+const fs = require('fs');
+const https = require('https');
 
 router.post('/login-api', async (req, res) => {
   const output = {
@@ -21,8 +24,8 @@ router.post('/login-api', async (req, res) => {
     auth: {},
   };
   //判斷帳號在資料庫
-  const sql = 'SELECT * FROM 	members_data WHERE account=?';
-  const [rows] = await db.query(sql, [req.body.username]); // 這個質去看帳號
+  const sql = 'SELECT * FROM 	members_data WHERE email=?';
+  const [rows] = await db.query(sql, [req.body.mail]); // 這個質去看帳號
   if (!rows.length) {
     return res.json(output);
   }
@@ -56,8 +59,8 @@ router.get('/linelogin', async (req, res) => {
   URL += '&state=123456789';
   URL += '&scope=openid%20profile%20email';
   //選填
-  URL += '&prompt=consent'
-  URL += '&max_age=241000'
+  URL += '&prompt=consent';
+  URL += '&max_age=241000';
   res.json(URL);
 });
 
@@ -81,7 +84,7 @@ router.get('/linecallback', async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     }
   );
-  console.log(res1);
+  //console.log(res1);
 
   id_token = res1.data.id_token;
 
@@ -89,7 +92,7 @@ router.get('/linecallback', async (req, res) => {
     client_id: process.env.LINE_CHANELL_ID,
     id_token: id_token,
   });
-  console.log(option2);
+  //console.log(option2);
 
   const res2 = await axios.post(
     'https://api.line.me/oauth2/v2.1/verify',
@@ -98,7 +101,70 @@ router.get('/linecallback', async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     }
   );
-  console.log(res2);
+
+  const output = {
+    registersuccess: false,
+    loginsuccess: false,
+    error: '',
+    auth: {},
+  };
+  //console.log(res2);
+  let name = res2.data.name;
+  let mail = res2.data.email;
+  let photo = res2.data.picture;
+
+  //拿到照片
+  function saveImageToDisk(url, path) {
+    let fullurl = url;
+
+    let localpath = fs.createWriteStream(path);
+
+    let request = https.get(fullurl, (res) => {
+      res.pipe(localpath);
+    });
+  }
+
+  let photoname = uuid4();
+  saveImageToDisk(photo, './public/uploads/imgs/' + photoname + '.jpg');
+  const sql_mail = `SELECT email FROM members_data WHERE email = ?`;
+  const [rows] = await db.query(sql_mail, mail);
+  // console.log(rows);
+
+  if (rows.length < 1) {
+    const sql_insert =
+      'INSERT INTO `members_data`(`email`,`name`,`member_photo`) VALUES (?,?,?)';
+
+    const [result] = await db.query(sql_insert, [
+      mail,
+      name,
+      photoname + '.jpg',
+    ]);
+
+    if (result.affectedRows) output.registersuccess = true;
+
+    return res.json(output);
+  } else if (rows.length === 1) {
+    const sql_select = 'SELECT * FROM members_data WHERE email = ?';
+    const [rows] = await db.query(sql_select, mail);
+    if (!rows.length) {
+      return res.json(output);
+    }
+    const row = rows[0];
+
+    output.loginsuccess = row['email'] === mail ? true : false;
+
+    if (output.loginsuccess) {
+      const { sid, name, member_photo } = row;
+      const token = jwt.sign({ sid, name }, process.env.JWT_SECRET);
+      output.auth = {
+        sid,
+        member_photo,
+        name,
+        token,
+      };
+    }
+    return res.json(output);
+  }
 });
 
 //google登入
@@ -128,6 +194,7 @@ router.get('/googlecallback', async (req, res, next) => {
 
   let mail = '';
   let name = '';
+  let photo = '';
   if (qs.code) {
     const r = await oAuth2c.getToken(qs.code);
     oAuth2c.setCredentials(r.tokens);
@@ -143,14 +210,29 @@ router.get('/googlecallback', async (req, res, next) => {
 
     mail = myData.emailAddresses[0].value;
     name = myData.names[0].givenName;
-    // console.log({ mail, name });
+    photo = myData.photos[0].url;
+    //console.log({ mail, name });
   }
   const output = {
-    registersuccess:false,
+    registersuccess: false,
     loginsuccess: false,
     error: '',
     auth: {},
   };
+
+  //拿到照片
+  function saveImageToDisk(url, path) {
+    let fullurl = url;
+
+    let localpath = fs.createWriteStream(path);
+
+    let request = https.get(fullurl, (res) => {
+      res.pipe(localpath);
+    });
+  }
+
+  let photoname = uuid4();
+  saveImageToDisk(photo, './public/uploads/imgs/' + photoname + '.jpg');
 
   const sql_mail = `SELECT email FROM members_data WHERE email = ?`;
   const [rows] = await db.query(sql_mail, mail);
@@ -158,14 +240,17 @@ router.get('/googlecallback', async (req, res, next) => {
 
   if (rows.length < 1) {
     const sql_insert =
-      'INSERT INTO `members_data`(`email`,`name`) VALUES (?,?)';
+      'INSERT INTO `members_data`(`email`,`name`,`member_photo`) VALUES (?,?,?)';
 
-    const [result] = await db.query(sql_insert, [mail, name]);
+    const [result] = await db.query(sql_insert, [
+      mail,
+      name,
+      photoname + '.jpg',
+    ]);
 
     if (result.affectedRows) output.registersuccess = true;
 
     return res.json(output);
-
   } else if (rows.length === 1) {
     const sql_select = 'SELECT * FROM members_data WHERE email = ?';
     const [rows] = await db.query(sql_select, mail);
@@ -177,10 +262,11 @@ router.get('/googlecallback', async (req, res, next) => {
     output.loginsuccess = row['email'] === mail ? true : false;
 
     if (output.loginsuccess) {
-      const { sid, name } = row;
+      const { sid, name, member_photo } = row;
       const token = jwt.sign({ sid, name }, process.env.JWT_SECRET);
       output.auth = {
         sid,
+        member_photo,
         name,
         token,
       };
@@ -494,8 +580,8 @@ async function getAreaData() {
   return { rows };
 }
 
-// 抓收藏列表
-async function getLovedList(req) {
+// 抓商品收藏列表
+async function getProductLovedList(req) {
   const m_sid = +req.query.m_sid;
 
   // 判斷登入
@@ -507,6 +593,24 @@ async function getLovedList(req) {
   const formatSql = SqlString.format(sql, [m_sid]);
   let rows = [];
   [rows] = await db.query(formatSql);
+  return { rows };
+}
+
+//抓文章收藏列表
+async function getArticleLovedList(req, res) {
+  const m_sid = +req.query.m_sid;
+
+  if (!m_sid) {
+    return res.json({ message: '請先登入', code: '401' });
+  }
+
+  const sql = `SELECT md.name, al.*,a.title,a.category,a.created_at,a.m_sid author FROM article_collection al JOIN article a ON al.a_sid = a.article_sid JOIN members_data md ON md.sid = a.m_sid WHERE al.m_sid =?`;
+
+  const formatSql = SqlString.format(sql, [m_sid]);
+  let rows = [];
+
+  [rows] = await db.query(formatSql);
+
   return { rows };
 }
 
@@ -549,6 +653,28 @@ async function getPhotoDetailData(req, res) {
   return { rows };
 }
 
+//多筆移除商品收藏
+router.post('/deleteproudctlist', async (req, res) => {
+  console.log(req.body);
+
+  const sql = 'DELETE FROM product_loved WHERE p_sid IN (?)';
+
+  const [result] = await db.query(sql, [req.body]);
+
+  res.json({ success: !!result.affectedRows, result });
+});
+
+//多筆移除文章收藏
+router.post('/deletearticlelist', async (req, res) => {
+  console.log(req.body);
+
+  const sql = 'DELETE FROM article_collection WHERE a_sid IN (?)';
+
+  const [result] = await db.query(sql, [req.body]);
+
+  res.json({ success: !!result.affectedRows, result });
+});
+
 //抓商品訂單資料
 //抓城市資料
 router.get('/citydata', async (req, res) => {
@@ -569,11 +695,13 @@ router.get('/petdata/:sid', async (req, res) => {
 });
 
 //抓文章收藏資料
-router.get('/articledata', async (req, res) => {});
+router.get('/articledata', async (req, res) => {
+  res.json(await getArticleLovedList(req, res));
+});
 
 //抓商品收藏資料
 router.get('/productdata', async (req, res) => {
-  res.json(await getLovedList(req));
+  res.json(await getProductLovedList(req));
 });
 
 //抓診所掛號資料
