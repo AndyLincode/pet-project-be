@@ -156,7 +156,7 @@ async function getProductData(req) {
     where = `WHERE p.sid =${sid}`;
   }
 
-  const t_sql = `SELECT  AVG(pr.scores) avgScores FROM \`products\` p JOIN \`product_comment_try\` pr ON pr.p_sid = p.sid ${where}`;
+  const t_sql = `SELECT  AVG(pr.scores) avgScores FROM \`products\` p JOIN \`product_comment\` pr ON pr.p_sid = p.sid ${where}`;
   const [[{ avgScores }]] = await db.query(t_sql);
 
   let rows = [];
@@ -174,7 +174,7 @@ async function getProductData(req) {
 
   // 評論
   if (rows[0]) {
-    const c_sql = `SELECT pr.*, m.member_photo FROM \`product_comment_try\` pr JOIN members_data m ON m.sid=pr.m_sid WHERE pr.p_sid=${sid}`;
+    const c_sql = `SELECT pr.*, m.member_photo FROM \`product_comment\` pr JOIN members_data m ON m.sid=pr.m_sid WHERE pr.p_sid=${sid}`;
 
     [comment] = await db.query(c_sql);
   }
@@ -356,7 +356,7 @@ router.post('/addReply-api', async (req, res) => {
 
   setSql = ` SET ` + set.join(`, `);
 
-  insertSql = `INSERT INTO product_comment_try ${setSql}`;
+  insertSql = `INSERT INTO product_comment ${setSql}`;
 
   console.log(insertSql);
 
