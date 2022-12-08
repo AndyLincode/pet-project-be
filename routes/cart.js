@@ -3,14 +3,19 @@ const router = express.Router();
 const db = require(__dirname + '/../modules/db_connect');
 const upload = require(__dirname + '/../modules/upload_img');
 const ShortUniqueId = require('short-unique-id');
+const dayjs = require('dayjs');
+const opay = require('opay_payment_nodejs');
+const SqlString = require('sqlstring');
 
 const uid = new ShortUniqueId({ length: 20 });
 
-const orderID = uid();
+let orderID = ''
 
 //新增訂單資料
 router.post('/addOrder', async (req, res) => {
   // return res.json(req.body);
+
+  orderID = uid();
 
   const output = {
     order_total_success: false,
@@ -53,7 +58,6 @@ router.post('/addOrder', async (req, res) => {
   if (req.body.productCart.length >= 1) {
     // 商品新增訂單
     for (let i = 0; i < req.body.productCart.length; i++) {
-      
       const sqlOrderDetails =
         'INSERT INTO `order_details`(`orders_num`, `product_sid`, `product_img`, `product_name`, `price`, `amount`, `amount_total`) VALUES (?,?,?,?,?,?,?)';
       [resultOrderDetails] = await db.query(sqlOrderDetails, [
@@ -75,33 +79,68 @@ router.post('/addOrder', async (req, res) => {
     resultOrder.affectedRows ||
     resultPhotoOrderDetails.affectedRows ||
     resultOrderDetails.affectedRows
-  ){
+  ) {
     output.success = true;
     // order_total_success=true;
     // photo_succes=true
     // product_success=true
   }
-    
-    
+
   res.json(output);
 });
 
-
 //歐付寶金流
 //按下結帳API
-router.get('/paymentaction', (req, res) => {
+router.get('/paymentaction', async (req, res) => {
+
+
+
   const uid = new ShortUniqueId({ length: 20 });
   const daytime = dayjs(new Date()).format('YYYY/MM/DD HH:mm:ss');
+
+  const sql1 = `SELECT orders.final_price,orders.orders_num FROM orders WHERE orders.orders_num = ? `;
+
+  const sql2 = `SELECT photo_order_details.photographer_name,photo_order_details.price,photo_order_details.date FROM orders LEFT JOIN photo_order_details ON orders.orders_num =photo_order_details.orders_num WHERE orders.orders_num = ?`;
+
+  const sql3 = `SELECT order_details.product_name,order_details.price,order_details.amount FROM orders LEFT JOIN order_details ON orders.orders_num = order_details.orders_num WHERE orders.orders_num = ?`;
+
+  const sqlString1 = SqlString.format(sql1, [orderID]);
+  const sqlString2 = SqlString.format(sql2, [orderID]);
+  const sqlString3 = SqlString.format(sql3, [orderID]);
+
+  let rows1 = [];
+  let rows2 = [];
+  let rows3 = [];
+
+  [rows1] = await db.query(sqlString1);
+  [rows2] = await db.query(sqlString2);
+  [rows3] = await db.query(sqlString3);
+
+  // console.log(rows1);
+  // console.log(rows2);
+  // console.log(rows3);
+
+  let photo_detail = `${rows2[0].photographer_name}攝影師 ${rows2[0].price}元`;
+  let product_detail = ``;
+
+  for (let aaa of rows3) {
+    product_detail +=
+      aaa.product_name + aaa.price + '元' + 'X' + aaa.amount + '#';
+  }
+
+  console.log(photo_detail);
+  console.log(product_detail);
+
   let base_param = {
-    MerchantTradeNo: uid(), //請帶20碼uid, ex: f0a0d7e9fae1bb72bc93
+    MerchantTradeNo: `${rows1[0].orders_num}`, //請帶20碼uid, ex: f0a0d7e9fae1bb72bc93
     MerchantTradeDate: daytime, //ex: 2017/02/13 15:45:30
-    TotalAmount: '100',
-    TradeDesc: '企鵝玩偶 一隻',
-    ItemName: '企鵝玩偶 300元 X 1#企鵝玩偶 200元 X 1',
+    TotalAmount: `${rows1[0].final_price}`,
+    TradeDesc: 'PetBen商品',
+    ItemName: `${photo_detail}#${product_detail}`,
     ReturnURL: 'http://localhost:3000/', // 付款結果通知URL  https://developers.opay.tw/AioMock/MerchantReturnUrl
-    OrderResultURL: 'http://localhost:3000/cart/cart_p3', // 在使用者在付款結束後，將使用者的瀏覽器畫面導向該URL所指定的URL
+    OrderResultURL: 'http://localhost:3000/cart/cartp3', // 在使用者在付款結束後，將使用者的瀏覽器畫面導向該URL所指定的URL
     EncryptType: 1,
-    // ItemURL: 'http://item.test.tw',aw
+    // ItemURL: 'http://item.test.tw',
     Remark: '該服務繳費成立時，恕不接受退款。',
     // HoldTradeAMT: '1',
     // StoreID: '',
@@ -160,7 +199,7 @@ router.post('/payment', (req, res) => {
   }
 });
 
-router.post('/payresult', (req, res) => {
+router.post('/cartp3', (req, res) => {
   var merchantID = req.body.MerchantID; //會員編號
   var merchantTradeNo = req.body.MerchantTradeNo; //交易編號
   var storeID = req.body.StoreID; //商店編號
@@ -181,9 +220,24 @@ router.post('/payresult', (req, res) => {
     },
   };
   console.log('result: ' + JSON.stringify(result));
-  res.redirect('http://localhost:3000/cart/cart_p3');
+  res.redirect('http://localhost:3000/cart/cartp3');
   // res.json(result);
 });
 
+async function getOrderData(req,res){
+  let sid = req.params.sid  ? req.params.sid.trim() :''
+
+  let where = `WHERE od.member_sid = ${sid}`
+
+  const sql = `SELECT od.* FROM orders od ${where} ORDER BY ordered_at DESC LIMIT 0 , 1`;
+
+  [rows] = await db.query(sql);
+
+  return { rows };
+}
+
+router.get('/member_order/:sid',async(req,res)=>{
+  res.json(await getOrderData(req,res))
+})
 
 module.exports = router;
