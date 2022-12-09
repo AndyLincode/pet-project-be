@@ -675,6 +675,24 @@ router.post('/deletearticlelist', async (req, res) => {
   res.json({ success: !!result.affectedRows, result });
 });
 
+//修改密碼
+router.put('/resetpassword', upload.none(), async (req, res) => {
+  const output = {
+    success: false,
+    code: 0,
+    error: {},
+    postData: req.body,
+  };
+
+  const sql = 'UPDATE `members_data` SET `password`=? WHERE `sid` = ?';
+
+  const [result] = await db.query(sql, [req.body.password, req.body.sid]);
+
+  if (result.changedRows) output.success = true;
+
+  res.json(output);
+});
+
 //抓商品訂單資料
 //抓城市資料
 router.get('/citydata', async (req, res) => {

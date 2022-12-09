@@ -6,10 +6,13 @@ const ShortUniqueId = require('short-unique-id');
 const dayjs = require('dayjs');
 const opay = require('opay_payment_nodejs');
 const SqlString = require('sqlstring');
+const hmacSHA256 = require('crypto-js/hmac-sha256');
+const Base64 = require('crypto-js/enc-base64');
+const axios = require('axios');
 
 const uid = new ShortUniqueId({ length: 20 });
 
-let orderID = ''
+let orderID = '';
 
 //新增訂單資料
 router.post('/addOrder', async (req, res) => {
@@ -27,13 +30,14 @@ router.post('/addOrder', async (req, res) => {
   };
 
   const sqlOrders =
-    'INSERT INTO `orders`(`orders_num`, `member_sid`, `photo_total_price`,`product_total_price`,`final_price`, `ordered_at`) VALUES (?,?,?,?,?,NOW())';
+    'INSERT INTO `orders`(`orders_num`, `member_sid`, `photo_total_price`,`product_total_price`,`final_price`,`pay_way`, `ordered_at`) VALUES (?,?,?,?,?,?,NOW())';
   const [resultOrder] = await db.query(sqlOrders, [
     orderID,
     req.body.memberID,
     req.body.photo_totalPrice,
     req.body.totalPrice,
     req.body.cartTotalPrice,
+    req.body.payWay,
   ]);
 
   let resultPhotoOrderDetails = [];
@@ -92,9 +96,6 @@ router.post('/addOrder', async (req, res) => {
 //歐付寶金流
 //按下結帳API
 router.get('/paymentaction', async (req, res) => {
-
-
-
   const uid = new ShortUniqueId({ length: 20 });
   const daytime = dayjs(new Date()).format('YYYY/MM/DD HH:mm:ss');
 
@@ -224,10 +225,158 @@ router.post('/cartp3', (req, res) => {
   // res.json(result);
 });
 
-async function getOrderData(req,res){
-  let sid = req.params.sid  ? req.params.sid.trim() :''
+const {
+  LINE_PAY_VERSION,
+  LINE_PAY_SITE,
+  LINE_PAY_CHANELL_ID,
+  LINE_PAY_CHANELL_SECRET,
+  LINE_PAY_RERURN_CONFIRM_URL,
+  LINE_PAY_RERURN_CANCEL_URL,
+} = process.env;
 
-  let where = `WHERE od.member_sid = ${sid}`
+const orders = {
+  amount: 1000,
+  currency: 'TWD',
+  packages: [
+    {
+      id: 'products_1',
+      amount: 1000,
+      products: [
+        {
+          name: '六角棒棒',
+          quantity: 1,
+          price: 1000,
+        },
+      ],
+    },
+  ],
+};
+
+router.post('/linepay', async (req, res) => {
+  const sql1 = `SELECT orders.final_price,orders.orders_num FROM orders WHERE orders.orders_num = ? `;
+
+  const sql2 = `SELECT photo_order_details.photographer_name,photo_order_details.price,photo_order_details.date FROM orders LEFT JOIN photo_order_details ON orders.orders_num =photo_order_details.orders_num WHERE orders.orders_num = ?`;
+
+  const sql3 = `SELECT order_details.product_name name,order_details.price,order_details.amount quantity FROM orders LEFT JOIN order_details ON orders.orders_num = order_details.orders_num WHERE orders.orders_num = ?`;
+
+  const sqlString1 = SqlString.format(sql1, [orderID]);
+  const sqlString2 = SqlString.format(sql2, [orderID]);
+  const sqlString3 = SqlString.format(sql3, [orderID]);
+
+  let rows1 = [];
+  let rows2 = [];
+  let rows3 = [];
+
+  [rows1] = await db.query(sqlString1);
+  [rows2] = await db.query(sqlString2);
+  [rows3] = await db.query(sqlString3);
+  // console.log(rows3);
+
+  let amount = rows1[0].final_price;
+
+  const orders = {
+    amount: amount,
+    currency: 'TWD',
+    orderId: orderID,
+    packages: [
+      {
+        id: 'products_1',
+        amount: amount,
+        products: rows3,
+      },
+    ],
+  };
+
+  console.log(orders);
+
+  try {
+    const linePayBody = {
+      ...orders,
+      redirectUrls: {
+        confirmUrl: `${LINE_PAY_RERURN_CONFIRM_URL}`,
+        cancelUrl: `${LINE_PAY_RERURN_CANCEL_URL}`,
+      },
+    };
+
+    const uri = '/payments/request';
+    const nonce = parseInt(new Date().getTime() / 1000);
+    const string = `${LINE_PAY_CHANELL_SECRET}/${LINE_PAY_VERSION}${uri}${JSON.stringify(
+      linePayBody
+    )}${nonce}`;
+
+    const signature = Base64.stringify(
+      hmacSHA256(string, LINE_PAY_CHANELL_SECRET)
+    );
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-LINE-ChannelId': LINE_PAY_CHANELL_ID,
+      'X-LINE-Authorization-Nonce': nonce,
+      'X-LINE-Authorization': signature,
+    };
+
+    const url = `${LINE_PAY_SITE}/${LINE_PAY_VERSION}${uri}`;
+
+    const response = await axios.post(url, linePayBody, { headers });
+
+    if (response?.data?.returnCode === '0000') {
+      res.json(response?.data?.info.paymentUrl.web);
+    }
+
+    //console.log(response);
+  } catch (error) {
+    console.log(error.message);
+  }
+});
+
+router.get('/linepay/confirm', async (req, res) => {
+  const { transactionId, orderId } = req.query;
+
+  const sql1 = `SELECT orders.final_price,orders.orders_num FROM orders WHERE orders.orders_num = ? `;
+
+  const sqlString1 = SqlString.format(sql1, [orderID]);
+  let rows1 = [];
+  [rows1] = await db.query(sqlString1);
+  let amount = rows1[0].final_price;
+
+  try {
+    const linePayBody = {
+      amount: amount,
+      currency: 'TWD',
+    };
+
+    const uri = `/payments/${transactionId}/confirm`;
+
+    const nonce = parseInt(new Date().getTime() / 1000);
+    const string = `${LINE_PAY_CHANELL_SECRET}/${LINE_PAY_VERSION}${uri}${JSON.stringify(
+      linePayBody
+    )}${nonce}`;
+
+    const signature = Base64.stringify(
+      hmacSHA256(string, LINE_PAY_CHANELL_SECRET)
+    );
+
+    const url = `${LINE_PAY_SITE}/${LINE_PAY_VERSION}${uri}`;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-LINE-ChannelId': LINE_PAY_CHANELL_ID,
+      'X-LINE-Authorization-Nonce': nonce,
+      'X-LINE-Authorization': signature,
+    };
+
+    const response = await axios.post(url, linePayBody, { headers });
+
+    res.json(response.data);
+  } catch (error) {
+    console.log(error.message);
+  }
+});
+
+async function getOrderData(req, res) {
+  let sid = req.params.sid ? req.params.sid.trim() : '';
+
+  let where = `WHERE od.member_sid = ${sid}`;
 
   const sql = `SELECT od.* FROM orders od ${where} ORDER BY ordered_at DESC LIMIT 0 , 1`;
 
@@ -236,8 +385,8 @@ async function getOrderData(req,res){
   return { rows };
 }
 
-router.get('/member_order/:sid',async(req,res)=>{
-  res.json(await getOrderData(req,res))
-})
+router.get('/member_order/:sid', async (req, res) => {
+  res.json(await getOrderData(req, res));
+});
 
 module.exports = router;
