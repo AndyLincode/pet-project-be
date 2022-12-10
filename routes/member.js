@@ -16,6 +16,8 @@ const { v4: uuid4 } = require('uuid');
 const fs = require('fs');
 const https = require('https');
 
+const uid = new ShortUniqueId({ length: 6 });
+
 router.post('/login-api', async (req, res) => {
   const output = {
     success: false,
@@ -464,8 +466,8 @@ router.post('/addpet', upload.single('pet_photo'), async (req, res) => {
   const sql =
     'INSERT INTO `pet_data`(`pet_pid`,`pet_name`,`Kind_of_pet`,`pet_gender`,`pet_birthday`,`member_sid`,`birth_control`,`pet_photo`) VALUES (?,?,?,?,?,?,?,?)';
 
-  if (req.body.pet_photo === 'cat_food.png' || 'dog_food.png') {
-    avatar = req.body.member_photo;
+  if (req.body.pet_photo === 'cat.png' || 'dog.png') {
+    avatar = req.body.pet_photo;
   } else {
     avatar = req.file.filename;
   }
@@ -691,6 +693,54 @@ router.put('/resetpassword', upload.none(), async (req, res) => {
   if (result.changedRows) output.success = true;
 
   res.json(output);
+});
+
+//產生code
+
+//手機驗證
+router.post('/phonecheck', upload.none(), async (req, res) => {
+  function codeTo() {
+    let digits = '0123456789';
+    let otp = '';
+    for (let i = 0; i < 6; i++) {
+      otp += digits[Math.floor(Math.random() * 10)];
+    }
+    return otp;
+  }
+
+  let code = await codeTo();
+  const sql = 'INSERT INTO `member_code`(`code`) VALUES (?);';
+
+  const [result] = await db.query(sql, [code]);
+
+  try {
+    const username = process.env.SNS_ACCOUNT;
+    const password = process.env.SNS_PASSWORD;
+    const phone = req.body.mobile;
+    const text = `您的驗證碼${code}`;
+
+    const api = `${process.env.SNS_API}&username=${username}&password=${password}&dstaddr=${phone}&smbody=${text}`;
+
+    const response = await axios.get(api);
+    res.json({ msg: 'success' });
+  } catch (error) {
+    res.json({ msg: 'error' });
+  }
+});
+
+router.post('/checkcode', upload.none(), async (req, res) => {
+  let where = `WHERE mc.code = \'${req.body.code}\'`;
+  let rows = [];
+
+  const sql = `SELECT * FROM \`member_code\` mc ${where}`;
+
+  [rows] = await db.query(sql);
+
+  if (rows.length === 1) {
+    res.json({ msg: 'success' });
+  } else {
+    res.json({ msg: 'error' });
+  }
 });
 
 //抓商品訂單資料
