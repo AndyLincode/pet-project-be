@@ -72,6 +72,8 @@ async function getListData(req, res) {
       sort = ` p.member_price DESC`;
     } else if (sortMethod === 'lowToHigh') {
       sort = ` p.member_price`;
+    } else if (sortMethod === 'top_sell') {
+      sort = ` p.inventory`;
     }
   }
 
