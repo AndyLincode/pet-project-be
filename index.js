@@ -54,7 +54,7 @@ app.use('/service', socket);
 
 // socket.io
 // 將 express 放進 http 中開啟 Server 的 6003 port ， 正確開啟後console印出訊息
-const socketPort = 3001 || 30002;
+const socketPort = 3001 || 3002;
 const server = require('http')
   .Server(app)
   .listen(socketPort, () => {

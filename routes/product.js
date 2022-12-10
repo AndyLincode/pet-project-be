@@ -72,6 +72,8 @@ async function getListData(req, res) {
       sort = ` p.member_price DESC`;
     } else if (sortMethod === 'lowToHigh') {
       sort = ` p.member_price`;
+    } else if (sortMethod === 'top_sell') {
+      sort = ` p.inventory`;
     }
   }
 
@@ -326,13 +328,7 @@ router.post('/addReply-api', async (req, res) => {
 
   console.log(reply);
 
-  if (
-    !reply.scores ||
-    !reply.comment ||
-    !reply.p_sid ||
-    !reply.m_sid ||
-    !reply.o_sid
-  ) {
+  if (!reply.scores || !reply.comment || !reply.p_sid || !reply.m_sid) {
     return res.json({ message: '請輸入回應', code: '401' });
   }
 
