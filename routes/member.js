@@ -289,7 +289,7 @@ router.post('/add', upload.none(), async (req, res) => {
   };
 
   const sql =
-    'INSERT INTO `members_data`( `email`, `password`, `member_photo`,`create_at`) VALUES (?,?,?,?,NOW())';
+    'INSERT INTO `members_data`( `email`, `password`, `member_photo`) VALUES (?,?,?)';
 
   const [result] = await db.query(sql, [
     req.body.mail,
