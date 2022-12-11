@@ -530,6 +530,14 @@ async function getClinicData(req, res) {
   return { rows };
 }
 
+//刪除寵物掛號資料
+router.delete('/delclinic/:sid', async (req, res) => {
+  const sql = 'DELETE FROM `reserve_data` WHERE reserve_sid = ?';
+  const [result] = await db.query(sql, [req.params.sid]);
+
+  res.json({ success: !!result.affectedRows, result });
+});
+
 //抓會員資料
 async function getMemberData(req, res) {
   let sid = req.params.sid ? req.params.sid.trim() : '';
