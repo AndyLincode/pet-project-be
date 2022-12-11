@@ -251,7 +251,7 @@ async function getRecommendedProducts(req, res) {
     where = `WHERE category=${mode}`;
   }
 
-  const sql = `SELECT * FROM \`products\` ${where} LIMIT 8`;
+  const sql = `SELECT * FROM \`products\` ${where} LIMIT 7`;
   let rows = [];
   [rows] = await db.query(sql);
   return { rows };
