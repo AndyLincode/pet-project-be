@@ -16,7 +16,7 @@ const { v4: uuid4 } = require('uuid');
 const fs = require('fs');
 const https = require('https');
 
-const uid = new ShortUniqueId({ length: 6 });
+// const uid = new ShortUniqueId({ length: 6 });
 
 router.post('/login-api', async (req, res) => {
   const output = {
@@ -280,7 +280,7 @@ router.get('/googlecallback', async (req, res, next) => {
 
 //會員新增資料
 router.post('/add', upload.none(), async (req, res) => {
-  const coupon = 'PetBen1214';
+  const photo = 'person_0.png';
   const output = {
     success: false,
     code: 0,
@@ -289,12 +289,12 @@ router.post('/add', upload.none(), async (req, res) => {
   };
 
   const sql =
-    'INSERT INTO `members_data`( `email`, `password`,`coupon_code`, `create_at`) VALUES (?,?,?,NOW())';
+    'INSERT INTO `members_data`( `email`, `password`, `member_photo`,`create_at`) VALUES (?,?,?,?,NOW())';
 
   const [result] = await db.query(sql, [
     req.body.mail,
     req.body.password,
-    coupon,
+    photo,
   ]);
 
   //affectedRows有影響的列數
@@ -318,7 +318,7 @@ router.put('/edit', upload.single('member_photo'), async (req, res) => {
     'UPDATE `members_data` SET `name`=?,`email`=?,`mobile`=?,`birthday`=?,`city`=?,`area`=?,`address`=?,`gender`=?,`member_photo`=? WHERE `sid`=?';
 
   if (req.body.member_photo === '') {
-    avatar = 'noname.png';
+    avatar = 'person_0.png';
   } else {
     avatar = req.file.filename;
   }
@@ -398,7 +398,7 @@ router.post('/sendpassword', upload.none(), async (req, res) => {
 //註冊 MAIL
 router.post('/sendregister', upload.none(), async (req, res) => {
   try {
-    const { name, mail, phone } = req.body;
+    const { mail, phone } = req.body;
 
     const options = {
       from: `PetBen 🛍️ <${process.env.USER}>`,
@@ -414,10 +414,10 @@ router.post('/sendregister', upload.none(), async (req, res) => {
                   Form Shoeshop Store
                 </p>
                 <div style="font-size: .8rem; margin: 0 30px">
-                  <p>FullName: <b>${name}</b></p>
                   <p>Email: <b>${mail}</b></p>
                   <p>Phone: <b>${phone}</b></p>
                   <p>Message: <i>歡迎你加入PetBen</i></p>
+                  <p>優惠代碼: <b>PetBen1214</b></p>
                 </div>
               </div>
             </div>

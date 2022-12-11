@@ -45,7 +45,7 @@ router.post('/addOrder', async (req, res) => {
     // 攝影師新增訂單
     for (let i = 0; i < req.body.photoCart.length; i++) {
       const sqlPhotoOrderDetails =
-        'INSERT INTO `photo_order_details`(`orders_num`, `photo_sid`, `photographer_img`, `photographer_name`, `date`, `day_parts`, `price`) VALUES (?,?,?,?,?,?,?)';
+        'INSERT INTO `photo_order_details`(`orders_num`, `photo_sid`, `photographer_img`, `photographer_name`, `date`, `day_parts`, `price`,`amount`) VALUES (?,?,?,?,?,?,?,?)';
       [resultPhotoOrderDetails] = await db.query(sqlPhotoOrderDetails, [
         orderID,
         req.body.photoCart[i].sid,
@@ -54,6 +54,7 @@ router.post('/addOrder', async (req, res) => {
         req.body.photoCart[i].date,
         req.body.photoCart[i].time,
         req.body.photoCart[i].price,
+        1,
       ]);
     }
   }
@@ -234,28 +235,28 @@ const {
   LINE_PAY_RERURN_CANCEL_URL,
 } = process.env;
 
-const orders = {
-  amount: 1000,
-  currency: 'TWD',
-  packages: [
-    {
-      id: 'products_1',
-      amount: 1000,
-      products: [
-        {
-          name: '六角棒棒',
-          quantity: 1,
-          price: 1000,
-        },
-      ],
-    },
-  ],
-};
+// const orders = {
+//   amount: 1000,
+//   currency: 'TWD',
+//   packages: [
+//     {
+//       id: 'products_1',
+//       amount: 1000,
+//       products: [
+//         {
+//           name: '六角棒棒',
+//           quantity: 1,
+//           price: 1000,
+//         },
+//       ],
+//     },
+//   ],
+// };
 
 router.post('/linepay', async (req, res) => {
   const sql1 = `SELECT orders.final_price,orders.orders_num FROM orders WHERE orders.orders_num = ? `;
 
-  const sql2 = `SELECT photo_order_details.photographer_name,photo_order_details.price,photo_order_details.date FROM orders LEFT JOIN photo_order_details ON orders.orders_num =photo_order_details.orders_num WHERE orders.orders_num = ?`;
+  const sql2 = `SELECT photo_order_details.photographer_name name,photo_order_details.price price,photo_order_details.amount quantity FROM orders LEFT JOIN photo_order_details ON orders.orders_num =photo_order_details.orders_num WHERE orders.orders_num = ?`;
 
   const sql3 = `SELECT order_details.product_name name,order_details.price,order_details.amount quantity FROM orders LEFT JOIN order_details ON orders.orders_num = order_details.orders_num WHERE orders.orders_num = ?`;
 
@@ -282,12 +283,12 @@ router.post('/linepay', async (req, res) => {
       {
         id: 'products_1',
         amount: amount,
-        products: rows3,
+        products: [...rows3, ...rows2],
       },
     ],
   };
 
-  console.log(orders);
+  console.log(JSON.stringify(orders));
 
   try {
     const linePayBody = {
