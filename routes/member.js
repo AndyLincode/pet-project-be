@@ -312,6 +312,7 @@ router.put('/edit', upload.single('member_photo'), async (req, res) => {
     error: {},
     postData: req.body, // 除錯用
     img: '',
+    name: '',
   };
 
   const sql =
@@ -338,7 +339,7 @@ router.put('/edit', upload.single('member_photo'), async (req, res) => {
 
   if (result.changedRows) output.success = true;
   if (req.body.member_photo !== '') output.img = req.file.filename;
-
+  if (req.body.name !== '') output.name = req.body.name;
   res.json(output);
 });
 
@@ -632,7 +633,7 @@ async function getOrderData(req, res) {
 
   let rows = [];
 
-  const sql = `SELECT * FROM \`orders\` od ${where}`;
+  const sql = `SELECT * FROM \`orders\` od  ${where} ORDER BY ordered_at DESC`;
 
   [rows] = await db.query(sql);
 
@@ -662,6 +663,31 @@ async function getPhotoDetailData(req, res) {
 
   return { rows };
 }
+
+//抓發文紀錄
+async function getPostRecordData(req, res) {
+  let sid = req.params.sid ? +req.params.sid : '';
+
+  const sql = `SELECT * FROM article WHERE article.m_sid = ? ORDER BY created_at DESC`;
+
+  const formatSql = SqlString.format(sql, [sid]);
+  let rows = [];
+
+  [rows] = await db.query(formatSql);
+
+  return { rows };
+}
+
+//移除發文紀錄
+router.post('/deletearticlepost', async (req, res) => {
+  console.log(req.body);
+
+  const sql = 'DELETE FROM article WHERE article_sid IN (?)';
+
+  const [result] = await db.query(sql, [req.body]);
+
+  res.json({ success: !!result.affectedRows, result });
+});
 
 //多筆移除商品收藏
 router.post('/deleteproudctlist', async (req, res) => {
@@ -798,6 +824,11 @@ router.get('/orderdata/:sid', async (req, res) => {
 //抓商品訂單細節資料
 router.get('/orderproductdetail/:sid', async (req, res) => {
   res.json(await getProductDetailData(req, res));
+});
+
+//抓會員發文紀錄
+router.get('/postrecord/:sid', async (req, res) => {
+  res.json(await getPostRecordData(req, res));
 });
 
 //會員細節資料
