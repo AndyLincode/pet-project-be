@@ -85,7 +85,7 @@ router.get('/details', async (req, res) => {
 // res.json(output);
 
 // 發文
-router.post('/forum_post', upload.none(), async (req, res) => {
+router.post('/forum_post', upload.single('img'), async (req, res) => {
   const output = {
     success: false,
     code: 0,
@@ -94,12 +94,13 @@ router.post('/forum_post', upload.none(), async (req, res) => {
   };
   console.log(req.body.title);
   const messSql =
-    'INSERT INTO `article`( `title`, `category`, `content`, `m_sid`,  `created_at`) VALUES (?,?,?,?,NOW())';
+    'INSERT INTO `article`( `title`, `category`, `content`, `m_sid`, `img` ,`created_at`) VALUES (?,?,?,?,?,NOW())';
   const [result] = await db.query(messSql, [
     req.body.title,
     req.body.category,
     req.body.content,
     req.body.m_sid,
+    req.file.filename
   ]);
   console.log(result);
   if (result.affectedRows) {

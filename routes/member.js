@@ -351,7 +351,7 @@ router.post('/sendpassword', upload.none(), async (req, res) => {
     const password = uid();
     const time = dayjs(new Date()).format('YYYY/MM/DD HH:mm:ss');
     const options = {
-      from: `PetBen 📧 <${process.env.USER}>`,
+      from: `PetBan 📧 <${process.env.USER}>`,
       to: `<${mail}>`,
       subject: 'Reset Your Password',
       html: `
@@ -402,7 +402,7 @@ router.post('/sendregister', upload.none(), async (req, res) => {
     const { mail, phone } = req.body;
 
     const options = {
-      from: `PetBen 🛍️ <${process.env.USER}>`,
+      from: `PetBan 🛍️ <${process.env.USER}>`,
       to: `<${mail}>`,
       subject: 'Message From Shoeshop Store',
       html: `
@@ -412,13 +412,13 @@ router.post('/sendregister', upload.none(), async (req, res) => {
               </div>
               <div style="width: 100%; gap: 10px; padding: 30px 0; display: grid">
                 <p style="font-weight: 800; font-size: 1.2rem; padding: 0 30px">
-                  Form Shoeshop Store
+                  Form PetBan Store
                 </p>
                 <div style="font-size: .8rem; margin: 0 30px">
                   <p>Email: <b>${mail}</b></p>
                   <p>Phone: <b>${phone}</b></p>
-                  <p>Message: <i>歡迎你加入PetBen</i></p>
-                  <p>優惠代碼: <b>PetBen1214</b></p>
+                  <p>Message: <i>歡迎你加入PetBan</i></p>
+                  <p>優惠代碼: <b>PetBan1214</b></p>
                 </div>
               </div>
             </div>
