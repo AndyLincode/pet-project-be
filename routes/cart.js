@@ -281,7 +281,7 @@ router.post('/linepay', async (req, res) => {
     orderId: orderID,
     packages: [
       {
-        id: 'products_1',
+        id: orderID,
         amount: amount,
         products: [...rows3, ...rows2],
       },

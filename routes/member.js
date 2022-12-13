@@ -289,11 +289,12 @@ router.post('/add', upload.none(), async (req, res) => {
   };
 
   const sql =
-    'INSERT INTO `members_data`( `email`, `password`, `member_photo`) VALUES (?,?,?)';
+    'INSERT INTO `members_data`( `email`, `password`, `mobile`,`member_photo`) VALUES (?,?,?,?)';
 
   const [result] = await db.query(sql, [
     req.body.mail,
     req.body.password,
+    req.body.phone,
     photo,
   ]);
 
@@ -467,9 +468,10 @@ router.post('/addpet', upload.single('pet_photo'), async (req, res) => {
   const sql =
     'INSERT INTO `pet_data`(`pet_pid`,`pet_name`,`Kind_of_pet`,`pet_gender`,`pet_birthday`,`member_sid`,`birth_control`,`pet_photo`) VALUES (?,?,?,?,?,?,?,?)';
 
-  if (req.body.pet_photo === 'cat.png' || 'dog.png') {
+  if (req.body.pet_photo === 'cat.png' || req.body.pet_photo === 'dog.png') {
     avatar = req.body.pet_photo;
   } else {
+    console.log(req.file.filename);
     avatar = req.file.filename;
   }
 
